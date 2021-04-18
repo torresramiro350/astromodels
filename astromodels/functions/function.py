@@ -1813,7 +1813,7 @@ def _parse_function_expression(function_specification):
 
                 instance = astromodels.functions.spatial_model.SpatialModel(unique_function)
 
-                except astromodels.functions.spatial_model.MissingDataFile
+                except astromodels.functions.spatial_model.MissingDataFile:
                     # It's not a template
 
                     raise UnknownFunction("Function %s in expression %s is unknown. If this is a template model, you are "
