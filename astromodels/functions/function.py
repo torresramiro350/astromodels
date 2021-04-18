@@ -1811,7 +1811,9 @@ def _parse_function_expression(function_specification):
 
                 import astromodels.functions.spatial_model
 
-                instance = astromodels.functions.spatial_model.SpatialModel(unique_function)
+                try:
+                
+                    instance = astromodels.functions.spatial_model.SpatialModel(unique_function)
 
                 except astromodels.functions.spatial_model.MissingDataFile:
                     # It's not a template
