@@ -321,7 +321,7 @@ class ModelFactory(object):
 
         # Make sure we have all parameters and order the values in the same way as the dictionary
         parameter_idx = []
-        for (key, val) in enumerate(self._parameters_grids.items()):
+        for i, (key, val) in enumerate(self._parameters_grids.items()):
 
             if key not in parameters_values_input:
 
