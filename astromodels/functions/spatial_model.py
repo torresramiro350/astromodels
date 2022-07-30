@@ -567,8 +567,7 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
 
         K:
 
-            desc: Normalization (freeze this to 1 if the template provides the
-            normalization by itself)
+            desc: Normalization (freeze this to 1 if the template provides the normalization by itself)
             initial value: 1
             fix: yes
 
@@ -984,7 +983,7 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
 
         return self._data_file
 
-    def to_dict(self, minimal=False):
+    def to_dict(self, minimal: bool = False):
 
         data = super(Function3D, self).to_dict(minimal)
 
