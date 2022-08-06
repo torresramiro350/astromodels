@@ -1,29 +1,29 @@
-import os
+import collections
 import gc
+import hashlib
+import os
 import pathlib
 import re
-import hashlib
 from builtins import object, range, str
 from dataclasses import dataclass
-from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
-import collections
+from typing import Any, Dict, List, Optional, Union
+
+import astropy.units as u
 import h5py
 import numpy as np
+import pandas as pd
 import scipy.interpolate
+from astropy.coordinates import ICRS, BaseCoordinateFrame, SkyCoord
+from astropy.io import fits
+from future.utils import with_metaclass
 from interpolation import interp
 from interpolation.splines import eval_linear
-import astropy.units as u
-import pandas as pd
-
-from astropy.io import fits
 from pandas import HDFStore
-from future.utils import with_metaclass
+from scipy.interpolate import RegularGridInterpolator
 
 from astromodels.core.parameter import Parameter
-from astropy.coordinates import SkyCoord, ICRS, BaseCoordinateFrame
 from astromodels.functions.function import Function3D, FunctionMeta
-from scipy.interpolate import RegularGridInterpolator
 from astromodels.utils import get_user_data_path
 from astromodels.utils.angular_distance import angular_distance_fast
 from astromodels.utils.logging import setup_logger
@@ -987,15 +987,15 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
 
         data = super(Function3D, self).to_dict(minimal)
 
-        if not minimal:
-
-            data["extra_setup"] = {
-                "_frame": self._frame,
-                "ramin": self.ramin,
-                "ramax": self.ramax,
-                "decmin": self.decmin,
-                "decmax": self.decmax,
-            }
+        # if not minimal:
+        #
+        #     data["extra_setup"] = {
+        #         "_frame": self._frame,
+        #         "ramin": self.ramin,
+        #         "ramax": self.ramax,
+        #         "decmin": self.decmin,
+        #         "decmax": self.decmax,
+        #     }
 
         return data
 
