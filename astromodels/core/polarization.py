@@ -28,21 +28,27 @@ class Polarization(Node):
         except TypeError:
 
             assert isinstance(number_or_parameter, Parameter), "%s must be either a number or a " \
-                                                               "parameter instance" % what
+                                                                   "parameter instance" % what
 
             # So this is a Parameter instance already. Enforce that it has the right maximum and minimum
 
             parameter = number_or_parameter
 
-            assert parameter.min_value == minimum, "%s must have a minimum of %s" % (what, minimum)
-            assert parameter.max_value == maximum, "%s must have a maximum of %s" % (what, maximum)
+            assert (
+                parameter.min_value == minimum
+            ), f"{what} must have a minimum of {minimum}"
+
+            assert (
+                parameter.max_value == maximum
+            ), f"{what} must have a maximum of {maximum}"
+
 
         else:
 
             # This was a float. Enforce that it has a legal value
 
             assert minimum <= number_or_parameter <= maximum, "%s cannot have a value of %s, " \
-                                                              "it must be %s <= %s <= %s" % (what, number_or_parameter,
+                                                                  "it must be %s <= %s <= %s" % (what, number_or_parameter,
                                                                                              minimum, what, maximum)
 
             parameter = Parameter(what, number_or_parameter,

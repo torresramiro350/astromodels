@@ -104,7 +104,7 @@ class PointSource(Source, Node):
 
                     log.error("RA and Dec must be numbers. If you are confused by this message, you "
                                          "are likely using the constructor in the wrong way. Check the documentation.")
-                    
+
                     raise AssertionError()
 
                 sky_position = SkyDirection(ra=ra, dec=dec)
@@ -251,13 +251,7 @@ class PointSource(Source, Node):
 
                     return True
 
-        for par in list(self.position.parameters.values()):
-
-            if par.free:
-
-                return True
-
-        return False
+        return any(par.free for par in list(self.position.parameters.values()))
 
     @property
     def free_parameters(self) -> Dict[str, Parameter]:
@@ -321,7 +315,7 @@ class PointSource(Source, Node):
 
         repr_dict = collections.OrderedDict()
 
-        key = '%s (point source)' % self.name
+        key = f'{self.name} (point source)'
 
         repr_dict[key] = collections.OrderedDict()
         repr_dict[key]['position'] = self._sky_position.to_dict(minimal=True)

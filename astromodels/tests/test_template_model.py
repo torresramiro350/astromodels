@@ -181,7 +181,7 @@ def test_input_output():
 
     # Test pickling with other functions
 
-    
+
     # tm = TemplateModel('__test')
     # tm.alpha = -0.95
     # tm.beta = -2.23
@@ -196,7 +196,7 @@ def test_input_output():
     clone3 = pickle.loads(dump2)
 
     assert clone3.index_2.value == new_shape.index_2.value
-    
+
     # Now save to disk and reload
     fake_source2 = PointSource("test", ra=0.0, dec=0.0, spectral_shape=new_shape)
 
@@ -216,7 +216,7 @@ def test_input_output():
     # tm.alpha = -0.95
     # tm.beta = -2.23
 
-    
+
     new_shape2 = Powerlaw() + tm
 
     new_shape2.index_1 = -2.256
@@ -226,7 +226,7 @@ def test_input_output():
     clone3 = pickle.loads(dump2)
 
     assert clone3.index_1.value == new_shape2.index_1.value
-    
+
     # Now save to disk and reload
     fake_source2 = PointSource("test", ra=0.0, dec=0.0, spectral_shape=new_shape2)
 
@@ -241,7 +241,7 @@ def test_input_output():
     assert np.allclose(fake_model2.test.spectrum.main.shape(xx), reloaded_model.test.spectrum.main.shape(xx))
 
 
-    
+
     os.remove("__test.yml")
 
 def test_xspec_table_model():

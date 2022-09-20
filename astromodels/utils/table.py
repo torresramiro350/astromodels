@@ -70,12 +70,10 @@ class Table(astropy.table.Table):
                                                          tableid=table_id, html=html, max_width=(-1 if html else None),
                                                          show_name=show_name, show_unit=None, show_dtype=False)
 
-        out = '\n'.join(data_lines)
-
         # if astropy.table.six.PY2 and isinstance(out, astropy.table.six.text_type):
         #    out = out.encode('utf-8')
 
-        return out
+        return '\n'.join(data_lines)
 
 
 class NumericMatrix(Table):

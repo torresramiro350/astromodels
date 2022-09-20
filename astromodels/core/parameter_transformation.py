@@ -67,9 +67,9 @@ def get_transformation(transformation_name):
     """
 
 
-    if not transformation_name in _known_transformations:
+    if transformation_name not in _known_transformations:
 
-        raise ValueError("Transformation %s is not known" % transformation_name)
+        raise ValueError(f"Transformation {transformation_name} is not known")
 
     else:
 

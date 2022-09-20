@@ -60,7 +60,10 @@ def find_model_dat():
 
     # Lazy check that it exists
 
-    assert os.path.exists(headas_env), "The HEADAS env. variable point to a non-existent directory: %s" % (headas_env)
+    assert os.path.exists(
+        headas_env
+    ), f"The HEADAS env. variable point to a non-existent directory: {headas_env}"
+
 
     # Get one directory above HEADAS (i.e., $HEADAS/..)
 
@@ -72,7 +75,10 @@ def find_model_dat():
 
     # Check that model.dat exists
 
-    assert os.path.exists(final_path), "Cannot find Xspec model definition file %s" % (final_path)
+    assert os.path.exists(
+        final_path
+    ), f"Cannot find Xspec model definition file {final_path}"
+
 
     return os.path.abspath(final_path)
 
@@ -145,7 +151,7 @@ def get_models(model_dat_path):
 
             this_model['parameters'] = collections.OrderedDict()
 
-            
+
             model_definitions[(model_name, library_function, model_type)] = this_model
 
         else:
@@ -175,8 +181,6 @@ def get_models(model_dat_path):
 
                     default_value = tokens[1]
 
-                    par_unit = ""
-
                     hard_minimum, soft_minimum, soft_maximum, hard_maximum = (0, 0, 1e9, 1e9)
 
                 elif len(tokens) == 3:
@@ -184,8 +188,6 @@ def get_models(model_dat_path):
                     par_name = tokens[0][1:]
 
                     default_value = tokens[2]
-
-                    par_unit = ""
 
                     hard_minimum, soft_minimum, soft_maximum, hard_maximum = (0, 0, 1e9, 1e9)
 
@@ -200,18 +202,17 @@ def get_models(model_dat_path):
                     if len(tokens) == 1:
 
                         default_value = tokens[0]
-                        par_unit = ""
                         hard_minimum, soft_minimum, soft_maximum, hard_maximum = (0, 0, 1e9, 1e9)
 
                     else:
-
-                        par_unit = ""
 
                         (default_value,
                          hard_minimum, soft_minimum,
                          soft_maximum, hard_maximum,
                          delta) = par_spec.split()
 
+
+                par_unit = ""
 
             else:
 
@@ -221,7 +222,7 @@ def get_models(model_dat_path):
 
                 if match is None:
 
-                    raise RuntimeError("Cannot parse parameter %s" % line)
+                    raise RuntimeError(f"Cannot parse parameter {line}")
 
                 par_name, par_unit, par_spec = match.groups()
 
@@ -296,7 +297,7 @@ def get_models(model_dat_path):
             # Check that the parameter name is not an illegal Python name
             if par_name in illegal_variable_names:
 
-                par_name = "xs_%s" % par_name
+                par_name = f"xs_{par_name}"
 
             # Sometimes the unit is " " which is not recognized by astropy
             if par_unit:
@@ -341,14 +342,17 @@ def get_models(model_dat_path):
             # by matching it with the relative regexp
             if re.match('([a-zA-Z_][a-zA-Z0-9_]*)$', par_name) is None:
 
-                raise ValueError("Illegal identifier name %s" % (par_name))
+                raise ValueError(f"Illegal identifier name {par_name}")
 
 
             if hard_maximum is not None and hard_minimum is not None:
 
                 if (float(hard_maximum) < float(hard_minimum)):
 
-                    raise ValueError("Hard maximum (%s) < hard minimum (%s)" %(hard_maximum,hard_minimum))
+                    raise ValueError(
+                        f"Hard maximum ({hard_maximum}) < hard minimum ({hard_minimum})"
+                    )
+
 
                 if float(default_value) > float(hard_maximum):
 
@@ -555,23 +559,17 @@ $DOCSTRING$
 
 def xspec_model_factory(model_name, xspec_function, model_type, definition):
 
-    class_name = 'XS_%s' % model_name
+    class_name = f'XS_{model_name}'
 
     # Get the path to the user data directory
     user_data_path = str(get_user_data_path())
 
     # Check if the code for this function already exists
 
-    code_file_name = os.path.join(user_data_path, '%s.py' % class_name)
+    code_file_name = os.path.join(user_data_path, f'{class_name}.py')
 
-    if os.path.exists(code_file_name):
-
-        # Code already exists
-        pass
-
-    else:
-
-        print("Generating code for Xspec model %s..." % model_name)
+    if not os.path.exists(code_file_name):
+        print(f"Generating code for Xspec model {model_name}...")
 
         # If this is an additive model (model_type == 'add') we need to add
         # one more parameter (normalization)
@@ -610,7 +608,7 @@ def xspec_model_factory(model_name, xspec_function, model_type, definition):
 
             f.write("# This code has been automatically generated. Do not edit.\n")
             f.write("\n\n%s\n" % code)
-        
+
         time.sleep(1)
 
     # Add the path to sys.path if it doesn't
@@ -621,7 +619,7 @@ def xspec_model_factory(model_name, xspec_function, model_type, definition):
     # Import the class in the current namespace (locals)
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        exec('from %s import %s' % (class_name, class_name))
+        exec(f'from {class_name} import {class_name}')
 
     # Return the class we just created
     return class_name, locals()[class_name]

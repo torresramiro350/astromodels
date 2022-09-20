@@ -70,13 +70,7 @@ class _LinkedFunctionContainer:
 
         output = pd.DataFrame.from_dict(this_dict)
 
-        if rich:
-
-            return output._repr_html_()
-
-        else:
-
-            return output.__repr__()
+        return output._repr_html_() if rich else output.__repr__()
 
 
 class Model(Node):
@@ -129,18 +123,15 @@ class Model(Node):
 
         except AttributeError:
 
-            if isinstance(source, Source):
-
-                log.error(
-                    "More than one source with the name '%s'. You cannot use the same name for multiple "
-                    "sources" % source.name
-                )
-
-                raise DuplicatedNode()
-
-            else:  # pragma: no cover
-
+            if not isinstance(source, Source):
                 raise
+
+            log.error(
+                "More than one source with the name '%s'. You cannot use the same name for multiple "
+                "sources" % source.name
+            )
+
+            raise DuplicatedNode()
 
         # Now see if this is a point or extended source, and add them to the
         # appropriate dictionary
@@ -170,7 +161,7 @@ class Model(Node):
         :return:
         """
 
-        if not source_name in self.sources:
+        if source_name not in self.sources:
 
             log.error(f"Source {source_name} is not part of the current model")
 
@@ -348,7 +339,7 @@ class Model(Node):
         :return: None
         """
 
-        if not len(values) == len(self.free_parameters):
+        if len(values) != len(self.free_parameters):
 
             log.error(
                 f"tried to pass {len(values)} parameters but need {len(self.free_parameters)}"
@@ -456,7 +447,7 @@ class Model(Node):
 
         for d in (self.point_sources, self.extended_sources, self.particle_sources):
 
-            sources.update(d)
+            sources |= d
 
         return sources
 
@@ -568,20 +559,15 @@ class Model(Node):
 
             raise AssertionError()
 
-        if self._has_child(parameter.name):
+        if self._has_child(parameter.name) and isinstance(
+            self._get_child(parameter.name), Parameter
+        ):
+            log.warning(
+                f"External parameter {parameter.name} already exist in the model. Overwriting it..."
+            )
 
-            # Remove it from the children only if it is a Parameter instance, otherwise don't, which will
-            # make the _add_child call fail (which is the expected behaviour! You shouldn't call two children
-            # with the same name)
 
-            if isinstance(self._get_child(parameter.name), Parameter):
-
-                log.warning(
-                    "External parameter %s already exist in the model. Overwriting it..."
-                    % parameter.name
-                )
-
-                self._remove_child(parameter.name)
+            self._remove_child(parameter.name)
 
         # This will fail if another node with the same name is already in the model
 
@@ -608,23 +594,20 @@ class Model(Node):
         Otherwise, this link will be set: parameter_1 = link_function(parameter_2)
         :return: (none)
         """
-        if not isinstance(parameter_1, list):
-            # Make a list of one element
-            parameter_1_list = [parameter_1]
-        else:
-            # Make a copy to avoid tampering with the input
-            parameter_1_list = list(parameter_1)
+        parameter_1_list = (
+            list(parameter_1) if isinstance(parameter_1, list) else [parameter_1]
+        )
 
         for param_1 in parameter_1_list:
-            if not param_1.path in self:
+            if param_1.path not in self:
 
-                log.error("Parameter %s is not contained in this model" % param_1.path)
+                log.error(f"Parameter {param_1.path} is not contained in this model")
 
                 raise AssertionError()
 
-        if not parameter_2.path in self:
+        if parameter_2.path not in self:
 
-            log.error("Parameter %s is not contained in this model" % parameter_2.path)
+            log.error(f"Parameter {parameter_2.path} is not contained in this model")
 
             raise AssertionError()
 
@@ -652,12 +635,9 @@ class Model(Node):
         :return: (none)
         """
 
-        if not isinstance(parameter, list):
-            # Make a list of one element
-            parameter_list = [parameter]
-        else:
-            # Make a copy to avoid tampering with the input
-            parameter_list = list(parameter)
+        parameter_list = (
+            list(parameter) if isinstance(parameter, list) else [parameter]
+        )
 
         for param in parameter_list:
             if param.has_auxiliary_variable:
@@ -669,7 +649,7 @@ class Model(Node):
 
                     warnings.simplefilter("always", RuntimeWarning)
 
-                    log.warning("Parameter %s has no link to be removed." % param.path)
+                    log.warning(f"Parameter {param.path} has no link to be removed.")
 
     def display(self, complete: bool = False) -> None:
         """
@@ -680,7 +660,7 @@ class Model(Node):
         """
 
         # Switch on the complete display flag
-        self._complete_display = bool(complete)
+        self._complete_display = complete
 
         # This will automatically choose the best representation among repr and repr_html
 

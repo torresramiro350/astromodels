@@ -89,16 +89,11 @@ class AbundanceTable:
     @property
     def info(self) -> str:
 
-        _abund_info = {}
-        _abund_info[
-            "WILM"
-        ] = "wilms\nfrom Wilms, Allen & McCray (2000), ApJ 542, 914 \n except for elements not listed which are given zero abundance)\n https://heasarc.nasa.gov/xanadu/xspec/manual/XSabund.html "
-        _abund_info[
-            "AG89"
-        ] = "angr\nfrom Anders E. & Grevesse N. (1989, Geochimica et Cosmochimica Acta 53, 197)\n https://heasarc.nasa.gov/xanadu/xspec/manual/XSabund.html"
-        _abund_info[
-            "ASPL"
-        ] = "aspl\nfrom Asplund M., Grevesse N., Sauval A.J. & Scott P. (2009, ARAA, 47, 481)\nhttps://heasarc.nasa.gov/xanadu/xspec/manual/XSabund.html"
+        _abund_info = {
+            "WILM": "wilms\nfrom Wilms, Allen & McCray (2000), ApJ 542, 914 \n except for elements not listed which are given zero abundance)\n https://heasarc.nasa.gov/xanadu/xspec/manual/XSabund.html ",
+            "AG89": "angr\nfrom Anders E. & Grevesse N. (1989, Geochimica et Cosmochimica Acta 53, 197)\n https://heasarc.nasa.gov/xanadu/xspec/manual/XSabund.html",
+            "ASPL": "aspl\nfrom Asplund M., Grevesse N., Sauval A.J. & Scott P. (2009, ARAA, 47, 481)\nhttps://heasarc.nasa.gov/xanadu/xspec/manual/XSabund.html",
+        }
 
         return _abund_info[self._current_table]
 
@@ -223,11 +218,7 @@ class PhAbs(Function1D, metaclass=FunctionMeta):
             self.xsect_ene, self.xsect_val, _x * (1 + _redshift)
         )
 
-        # evaluate the exponential with numba
-
-        spec = _numba_eval(NH, xsect_interp) * _y_unit
-
-        return spec
+        return _numba_eval(NH, xsect_interp) * _y_unit
 
 
 # TbAbs class
@@ -322,9 +313,7 @@ class TbAbs(Function1D, metaclass=FunctionMeta):
             self.xsect_ene, self.xsect_val, _x * (1 + _redshift)
         )
 
-        spec = _numba_eval(NH, xsect_interp) * _y_unit
-
-        return spec
+        return _numba_eval(NH, xsect_interp) * _y_unit
 
 
 # WAbs class
@@ -400,9 +389,7 @@ class WAbs(Function1D, metaclass=FunctionMeta):
             self.xsect_ene, self.xsect_val, _x * (1 + _redshift)
         )
 
-        spec = _numba_eval(NH, xsect_interp) * _y_unit
-
-        return spec
+        return _numba_eval(NH, xsect_interp) * _y_unit
 
 
 if has_ebltable:

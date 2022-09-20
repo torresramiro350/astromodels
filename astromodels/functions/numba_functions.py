@@ -54,17 +54,12 @@ def plaw_flux_norm(index, a, b):
     """
     energy flux power law
     """
-    # use the limit of the
-    if index != -2.0:
+    if index == -2.0:
+        return - math.log(a/b)
 
-        dp2 = 2 + index
+    dp2 = 2 + index
 
-        intflux = (math.pow(b, dp2) - math.pow(a, dp2)) / dp2
-    else:
-
-        intflux = - math.log(a/b)
-
-    return intflux
+    return (math.pow(b, dp2) - math.pow(a, dp2)) / dp2
 
 
 @nb.njit(fastmath=True, cache=_cache_functions)
@@ -254,14 +249,11 @@ def ggrb_int_pl(a, b, Ec, Emin, Emax):
 
     pre = math.pow(a - b, a - b) * math.exp(b - a) / math.pow(Ec, b)
 
-    if b != -2:
-        b2 = 2+b
-
-        return pre / (b2) * (math.pow(Emax, b2) - math.pow(Emin, b2))
-
-    else:
-
+    if b == -2:
         return pre * math.log(Emax/Emin)
+    b2 = 2+b
+
+    return pre / (b2) * (math.pow(Emax, b2) - math.pow(Emin, b2))
 
 
 # @nb.njit(fastmath=True, cache=_cache_functions)

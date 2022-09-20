@@ -38,29 +38,26 @@ def xspec_cosmo(H0=None,q0=None,lambda_0=None):
     current_settings = _xspec.get_xscosmo()
 
     if (H0 is None) and (q0 is None) and (lambda_0 is None):
-
         return current_settings
 
 
-    else:
+    # ok, we will see what was changed by the used
 
-        # ok, we will see what was changed by the used
+    user_inputs = [H0, q0, lambda_0]
 
-        user_inputs = [H0, q0, lambda_0]
+    for i, current_setting in enumerate(current_settings):
 
-        for i, current_setting in enumerate(current_settings):
+        if user_inputs[i] is None:
 
-            if user_inputs[i] is None:
+            # the user didn't modify this,
+            # so lets keep what was already set
 
-                # the user didn't modify this,
-                # so lets keep what was already set
-
-                user_inputs[i] = current_setting
+            user_inputs[i] = current_setting
 
 
-        # pass this to xspec
+    # pass this to xspec
 
-        _xspec.set_xscosmo(*user_inputs)
+    _xspec.set_xscosmo(*user_inputs)
 
 
 def xspec_xsect(command_string=None):

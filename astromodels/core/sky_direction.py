@@ -92,21 +92,27 @@ class SkyDirection(Node):
         except TypeError:
 
             assert isinstance(number_or_parameter, Parameter), "%s must be either a number or a " \
-                                                               "parameter instance" % what
+                                                                   "parameter instance" % what
 
             # So this is a Parameter instance already. Enforce that it has the right maximum and minimum
 
             parameter = number_or_parameter
 
-            assert parameter.min_value >= minimum, "%s must have a minimum greater than or equal to %s" % (what, minimum)
-            assert parameter.max_value <= maximum, "%s must have a maximum less than or equal to %s" % (what, maximum)
+            assert (
+                parameter.min_value >= minimum
+            ), f"{what} must have a minimum greater than or equal to {minimum}"
+
+            assert (
+                parameter.max_value <= maximum
+            ), f"{what} must have a maximum less than or equal to {maximum}"
+
 
         else:
 
             # This was a float. Enforce that it has a legal value
 
             assert minimum <= number_or_parameter <= maximum, "%s cannot have a value of %s, " \
-                                                              "it must be %s <= %s <= %s" % (what, number_or_parameter,
+                                                                  "it must be %s <= %s <= %s" % (what, number_or_parameter,
                                                                                              minimum, what, maximum)
 
             parameter = Parameter(what, number_or_parameter,
@@ -245,13 +251,11 @@ class SkyDirection(Node):
 
             data['ra'] = self.ra.to_dict(minimal)
             data['dec'] = self.dec.to_dict(minimal)
-            data['equinox'] = self._equinox
-
         else:
 
             data['l'] = self.l.to_dict(minimal)
             data['b'] = self.b.to_dict(minimal)
-            data['equinox'] = self._equinox
+        data['equinox'] = self._equinox
 
         return data
 
@@ -296,16 +300,10 @@ class SkyDirection(Node):
 
     def _repr__base(self, rich_output):
 
-        if self._coord_type == 'equatorial':
-
-            representation = 'Sky direction (R.A., Dec.) = (%.5f, %.5f) (%s)' % (self.ra.value,
-                                                                                 self.dec.value,
-                                                                                 self.equinox)
-
-        else:
-
-            representation = 'Sky direction (l, b) = (%.5f, %.5f) (%s)' % (self.l.value,
-                                                                           self.b.value,
-                                                                           self.equinox)
-
-        return representation
+        return (
+            'Sky direction (R.A., Dec.) = (%.5f, %.5f) (%s)'
+            % (self.ra.value, self.dec.value, self.equinox)
+            if self._coord_type == 'equatorial'
+            else 'Sky direction (l, b) = (%.5f, %.5f) (%s)'
+            % (self.l.value, self.b.value, self.equinox)
+        )

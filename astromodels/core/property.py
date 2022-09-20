@@ -31,7 +31,7 @@ class PropertyBase(Node):
         self._allowed_values: Optional[List[str]] = allowed_values
         self._defer: bool = defer
         self._eval_func: Optional[str] = eval_func
-        
+
         if (value is None) and (not self._defer):
 
             log.error(f"property {name} was given no initial value but is NOT deferred")
@@ -61,20 +61,20 @@ class PropertyBase(Node):
 
         if (self._defer) and (new_value is None):
 
-                # this is ok
-                pass
+            # this is ok
+            pass
 
         elif self._allowed_values is not None:
 
-            if not new_value in self._allowed_values:
+            if new_value not in self._allowed_values:
 
                 log.error(f"{self.name} can only take the values {','.join(self._allowed_values)} not {new_value}")
 
                 raise SettingUnknownValue()
-                
+
 
         self._internal_value = new_value
-                                       
+
         # if there is an eval func value
         # then we need to execute the function
         # on the parent
@@ -82,24 +82,20 @@ class PropertyBase(Node):
         if (self._internal_value == "_tmp") and self._defer:
 
             # do not execute in this mode
-            
+
             return 
 
-        if self._eval_func is not None:
+        if self._eval_func is not None and self._parent is not None:
+            if self._parent.name == "composite":
+                # ok, we have a composite function
 
-            # if there is a parent
-            if self._parent is not None:
+                func_idx = int(self._name.split("_")[-1]) - 1
 
-                if self._parent.name == "composite":
-                    # ok, we have a composite function
+                getattr(self._parent._functions[func_idx], str(self._eval_func))()
 
-                    func_idx = int(self._name.split("_")[-1]) - 1
+            else:
 
-                    getattr(self._parent._functions[func_idx], str(self._eval_func))()
-
-                else:
-                
-                    getattr(self._parent, str(self._eval_func))()
+                getattr(self._parent, str(self._eval_func))()
 
             # other wise this will run when the parent is set
                 
@@ -142,11 +138,7 @@ class PropertyBase(Node):
         Returns an exact copy of the current property
         """
 
-        # Deep copy everything to make sure that there are no ties between the new instance and the old one
-
-        new_property = copy.deepcopy(self)
-
-        return new_property
+        return copy.deepcopy(self)
 
     def _repr__base(self, rich_output):  # pragma: no cover
 
@@ -220,9 +212,5 @@ class FunctionProperty(PropertyBase):
             
         def _repr__base(self, rich_output=False):
 
-            representation = (
-                f"Property {self.name} = {self.value}\n"
-                f"(allowed values = {'all' if self._allowed_values is None else ' ,'.join(self._allowed_values)})")
-                
-            return representation
+            return f"Property {self.name} = {self.value}\n(allowed values = {'all' if self._allowed_values is None else ' ,'.join(self._allowed_values)})"
             

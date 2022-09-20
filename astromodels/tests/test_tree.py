@@ -129,23 +129,18 @@ def test_hashing():
     node22 = Node('node22')
     node3 = Node('node3')
 
-    d ={}
-
-    # nodes as hashes
-    
-    d[node1] = 1
-    d[node2] = 2
+    d = {node1: 1, node2: 2}
 
     d[node1] == 1
     d[node2] == 2
 
     # nodes in dicts
-    
+
     d = {}
-    
+
     d["node1"] = node1
 
-    
+
     node1._add_child(node2)
     node1._add_child(node22)
     node2._add_child(node3)
@@ -158,12 +153,8 @@ def test_hashing():
     d = {}
 
 
-    d ={}
+    d = {node1: 1, node1.node2: 2}
 
-    d[node1] = 1
-    d[node1.node2] = 2
-
-    
     d[node1] == 1
     d[node2] == 2
     
@@ -193,8 +184,7 @@ def test_remove_child():
 
     n = Node("node")
 
-    for i in range(1000):
-
+    for _ in range(1000):
         t._add_child(n)
 
         assert t._get_child("node") == n
@@ -213,8 +203,7 @@ def test_remove_child():
 
     n = Node("node")
 
-    for i in range(1000):
-
+    for _ in range(1000):
         t._add_child(n)
 
         assert t._get_child("node") == n

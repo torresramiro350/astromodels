@@ -148,7 +148,7 @@ def ms_dust(x, e_bmv, rv, a, lamb, b, n):
     ne = len(x)
 
     xx = hc / x
-    
+
     out = np.zeros(ne)
 
     for i in range(ne):
@@ -173,9 +173,9 @@ def ms_dust_xspec(x, e_bmv, rv, a, lamb, b, n):
     a_b = rv * (1 + e_bmv)
 
     ne = len(x)
-    
+
     out = np.zeros(ne)
-    
+
     xx = hc / x
 
     xl = xx[0]

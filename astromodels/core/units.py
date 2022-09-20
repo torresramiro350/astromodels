@@ -41,13 +41,16 @@ def _check_unit(new_unit, old_unit):
 
     except AttributeError:
 
-        raise UnitMismatch("The provided unit (%s) has no physical type. Was expecting a unit for %s"
-                           % (new_unit, old_unit.physical_type))
+        raise UnitMismatch(
+            f"The provided unit ({new_unit}) has no physical type. Was expecting a unit for {old_unit.physical_type}"
+        )
+
 
     if new_unit.physical_type != old_unit.physical_type:
 
-        raise UnitMismatch("Physical type mismatch: you provided a unit for %s instead of a unit for %s"
-                           % (new_unit.physical_type, old_unit.physical_type))
+        raise UnitMismatch(
+            f"Physical type mismatch: you provided a unit for {new_unit.physical_type} instead of a unit for {old_unit.physical_type}"
+        )
 
 
 class _AstromodelsUnits(object):
@@ -79,9 +82,7 @@ class _AstromodelsUnits(object):
         cls.angle = property(*(cls._create_property('angle')))
         cls.area = property(*(cls._create_property('area')))
 
-        obj = super(_AstromodelsUnits, cls).__new__(cls)
-
-        return obj
+        return super(_AstromodelsUnits, cls).__new__(cls)
 
     def get(self, what):
 
@@ -117,7 +118,7 @@ class _AstromodelsUnits(object):
 
         except KeyError:
 
-            raise UnknownUnit("%s is not a fundamental unit" % what)
+            raise UnknownUnit(f"{what} is not a fundamental unit")
 
     # This is a function which generates the elements needed to make a property.photon
     # Just a trick to avoid having to duplicate the same code for each unit.
@@ -126,8 +127,11 @@ class _AstromodelsUnits(object):
     @staticmethod
     def _create_property(what):
 
-        return (lambda self: self._get_unit(what), lambda self, new_unit: self._set_unit(what, new_unit),
-                "Sets or gets the unit for %s" % what)
+        return (
+            lambda self: self._get_unit(what),
+            lambda self, new_unit: self._set_unit(what, new_unit),
+            f"Sets or gets the unit for {what}",
+        )
 
     # Add the == and != operators
     def __eq__(self, other):
@@ -161,13 +165,7 @@ class _AstromodelsUnitsFactory(object):
 
                 self._instance = _AstromodelsUnits(*args, **kwds)
 
-                return self._instance
-
-            else:
-
-                # Use the instance already created
-
-                return self._instance
+            return self._instance
 
 
 # Create the factory to be used in the program

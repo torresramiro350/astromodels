@@ -303,10 +303,7 @@ class ModelFactory(object):
 
             shape = [len(v) for k, v in self._parameters_grids.items()]
 
-            shape.append(self._E.shape[0])
-            shape.append(self._L.shape[0])
-            shape.append(self._B.shape[0])
-
+            shape.extend((self._E.shape[0], self._L.shape[0], self._B.shape[0]))
             log.debug(f"grid shape: {shape}")
 
             self._data_frame = np.zeros(tuple(shape))
@@ -804,13 +801,12 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
                         # this_interpolator = RegularGridInterpolator(
                         this_interpolator = GridInterpolate(
                             tuple(
-                                [
-                                    np.array(x)
-                                    for x in list(self._parameters_grids.values())
-                                ]
+                                np.array(x)
+                                for x in list(self._parameters_grids.values())
                             ),
                             this_data,
                         )
+
 
                     self._interpolators.append(this_interpolator)
 
@@ -898,7 +894,7 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
                 # because if function returns zero, 10**(0) = 1.
                 # This affects the fit in 3ML and breaks things.
 
-                log_interpolated_slice = interpolator(tuple([engs, lons, lats]))
+                log_interpolated_slice = interpolator((engs, lons, lats))
 
                 interpolated_slice = np.array(
                     [
@@ -908,7 +904,7 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
                 )
 
             else:
-                interpolated_slice = interpolator(tuple([engs, lons, lats]))
+                interpolated_slice = interpolator((engs, lons, lats))
 
             f_interpolated[:, i] = interpolated_slice
 
@@ -985,8 +981,6 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
 
     def to_dict(self, minimal: bool = False):
 
-        data = super(Function3D, self).to_dict(minimal)
-
         # if not minimal:
         #
         #     data["extra_setup"] = {
@@ -997,7 +991,7 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
         #         "decmax": self.decmax,
         #     }
 
-        return data
+        return super(Function3D, self).to_dict(minimal)
 
     # Define the region within the template ROI
     def define_region(

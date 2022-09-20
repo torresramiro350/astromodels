@@ -13,7 +13,7 @@ linear_models = ["Constant", "Cubic", "DiracDelta", "Line", "Quadratic", "Quarti
 one_d_func_list = []
 two_d_func_list = []
 # we will loop through all the functions and generate docs for them
-    
+
 for k, v in _known_functions.items():
 
     if k in models_to_exclude:
@@ -22,18 +22,18 @@ for k, v in _known_functions.items():
 
 
     instance = v()
-    
+
     if instance.n_dim == 1:
 
         print(f"generating {k}")
 
         one_d_func_list.append(k)
 
-        
+
     if instance.n_dim == 2:
 
         print(f"generating {k}")
-        
+
         two_d_func_list.append(k)
 
 

@@ -189,13 +189,13 @@ def test_call_with_units():
     def test_one(class_type):
 
         if class_type == _ComplexTestFunction:
-        
+
             instance = class_type(file_name="test.txt")
-            
+
         else:
 
             instance = class_type()
-            
+
         if not instance.is_prior:
 
             # if we have fixed x_units then we will use those
@@ -208,7 +208,7 @@ def test_call_with_units():
             else:
 
                 x_unit_to_use = u.keV
-                
+
             # Use the function as a spectrum
             ps = PointSource("test", 0, 0, instance)
 
@@ -220,7 +220,7 @@ def test_call_with_units():
 
                 particleSource = ParticleSource("particles", p)
 
-                
+
 
                 instance.set_particle_distribution(p)
 
@@ -228,7 +228,7 @@ def test_call_with_units():
             # elif instance.name in ["PhAbs", "TbAbs"]:
 
             #     instance
-                
+
 
             result = ps(1.0)
 
@@ -241,26 +241,26 @@ def test_call_with_units():
             result = ps(np.array([1, 2, 3]) * x_unit_to_use)
 
             assert isinstance(result, u.Quantity)
-            
+
             if instance.name in [ "Synchrotron", "_ComplexTestFunction" ]:
               model = Model( particleSource, ps)
-                  
-                  
+
+
             else:
               model = Model( ps )
-            
+
             new_model = clone_model( model )
-            
+
             new_result =  new_model["test"](np.array([1, 2, 3]) * x_unit_to_use)
-            
+
             assert np.all(new_result==result)
 
             model.save("__test.yml", overwrite=True)
-            
+
             new_model = load_model("__test.yml")
 
             new_result =  new_model["test"](np.array([1, 2, 3]) * x_unit_to_use)
-            
+
             assert np.all(new_result==result)
 
         else:
@@ -296,7 +296,7 @@ def test_call_with_units():
 
         if this_function._n_dim == 1:
 
-            print("testing %s ..." % key)
+            print(f"testing {key} ...")
 
             test_one(_known_functions[key])
 
@@ -305,7 +305,7 @@ def test_call_with_composite_function_with_units():
 
     def one_test(spectrum):
 
-        print("Testing %s" % spectrum.expression)
+        print(f"Testing {spectrum.expression}")
 
         # # if we have fixed x_units then we will use those
         # # in the test
@@ -348,7 +348,7 @@ def test_call_with_composite_function_with_units():
     # test the absorption models
 
     if has_abs_models:
-    
+
         spectrum = PhAbs() * Powerlaw()
 
 
@@ -363,7 +363,7 @@ def test_call_with_composite_function_with_units():
 
         one_test(spectrum)
 
-    
+
     if has_xspec:
 
         spectrum = XS_phabs() * Powerlaw()
@@ -385,11 +385,11 @@ def test_call_with_composite_function_with_units():
         spectrum = XS_phabs() * XS_powerlaw() * XS_phabs() + XS_powerlaw()
 
         one_test(spectrum)
-        
+
     if has_ebl:
-    
+
         spectrum = Powerlaw() * EBLattenuation()
-        
+
         one_test(spectrum)
 
 

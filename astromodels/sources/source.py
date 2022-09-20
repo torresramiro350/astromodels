@@ -39,7 +39,7 @@ class Source(object):
         if src_type not in SourceType:
 
             log.error(f"Source of type {src_type} is unknown")
-            
+
             raise UnknownSourceType()
 
         else:

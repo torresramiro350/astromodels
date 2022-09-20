@@ -36,11 +36,11 @@ class Node(NodeBase):
         if not is_valid_variable_name(name):
 
             log.error("Illegal characters in name %s. You can only use letters and numbers, " \
-                                             "and _" % name)
+                                                 "and _" % name)
 
             raise AssertionError()
 
-        if not name != "name":
+        if name == "name":
 
             log.error("You cannot call a node 'name', it is reserved.")
 

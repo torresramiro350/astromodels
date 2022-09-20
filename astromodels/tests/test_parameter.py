@@ -409,7 +409,7 @@ def test_set_remove_minimum():
 
     p1.remove_minimum()
 
-    assert p1.min_value == None
+    assert p1.min_value is None
 
     p1.value = -1000.0
 
@@ -422,7 +422,7 @@ def test_set_remove_maximum():
 
     p1.remove_maximum()
 
-    assert p1.max_value == None
+    assert p1.max_value is None
 
     p1.value = 1000.0
 
