@@ -16,18 +16,10 @@ one_d_func_list = []
 two_d_func_list = []
 
 
-with open("doc_gen_1d.md") as f:
-
-    base_1d_md_str = f.read()
-
-with open("doc_gen_2d.md") as f:
-
-    base_2d_md_str = f.read()
-
-
-
+base_1d_md_str = Path("doc_gen_1d.md").read_text()
+base_2d_md_str = Path("doc_gen_2d.md").read_text()
 # we will loop through all the functions and generate docs for them
-    
+
 for k, v in _known_functions.items():
 
     if k in models_to_exclude:
@@ -38,7 +30,7 @@ for k, v in _known_functions.items():
     instance = v()
 
     ntbk_file_name = f"{k}.ipynb"
-    
+
     if instance.n_dim == 1:
 
         print(f"generating {k}")
@@ -50,9 +42,9 @@ for k, v in _known_functions.items():
         this_md_str = base_1d_md_str.replace("func_title", k.replace("_", " "))
 
         # create
-        
+
         ntbk = jupytext.reads(this_md_str, fmt='md')
-        
+
         wide_energy_range = True
 
         if k in narrow_energy_funcs:
@@ -63,7 +55,7 @@ for k, v in _known_functions.items():
         y_scale = "log"
 
         linear_range = False
-        
+
         if k in linear_models or instance.is_prior:
 
             linear_range = True
@@ -71,7 +63,7 @@ for k, v in _known_functions.items():
             x_scale = "linear"
             y_scale = "linear"
 
-            
+
         jupytext.write(ntbk, ntbk_file_name)
 
         print(f"excecuting {ntbk_file_name}")
@@ -88,11 +80,11 @@ for k, v in _known_functions.items():
 
                             ))
 
-        
+
     if instance.n_dim == 2:
 
         print(f"generating {k}")
-        
+
         two_d_func_list.append(k)
 
 
@@ -101,9 +93,9 @@ for k, v in _known_functions.items():
         this_md_str = base_2d_md_str.replace("func_title", k.replace("_", " "))
 
         # create
-        
+
         ntbk = jupytext.reads(this_md_str, fmt='md')
-            
+
         jupytext.write(ntbk, ntbk_file_name)
 
         print(f"excecuting {ntbk_file_name}")
@@ -115,7 +107,7 @@ for k, v in _known_functions.items():
             parameters=dict(func_name=k,
                             ))
 
-        
+
 
 p = Path("../docs/function_docs/functions_1d.rst").absolute()
 
@@ -128,7 +120,7 @@ for name in one_d_func_list:
     if f"{name}.ipynb" not in rst_1d:
 
         raise RuntimeError(f"{name} is not in the RST! Run the generation script")
-        
+
 
 p = Path("../docs/function_docs/functions_2d.rst").absolute()
 

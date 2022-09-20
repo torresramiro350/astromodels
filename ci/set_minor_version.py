@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     # Read current content
 
-    assert os.path.exists(file_path), "File %s does not exist!" % file_path
+    assert os.path.exists(file_path), f"File {file_path} does not exist!"
 
     with open(file_path, "r") as f:
 
@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     if line_number is None:
 
-        raise RuntimeError("Could not understand version in file %s" % file_path)
+        raise RuntimeError(f"Could not understand version in file {file_path}")
 
     # Update patch version
 

@@ -139,16 +139,14 @@ def accept_quantity(input_type=float, allow_none=False):
                 elif value is None:
 
                     if allow_none:
-
                         return method(instance, None, *args, **kwargs)
 
-                    else:  # pragma: no cover
+                    log.exception(
+                        f"You cannot pass None as argument for method {method.__name__} of {instance.name}"
+                    )
 
-                        log.exception("You cannot pass None as argument for "
-                                      "method %s of %s" %
-                                      (method.__name__, instance.name))
 
-                        raise TypeError()
+                    raise TypeError()
 
                 else:  # pragma: no cover
 
@@ -192,7 +190,7 @@ class ParameterBase(Node):
         Node.__init__(self, name)
 
         # Make a static name which will never change (not even after a _change_name call)
-        self._static_name: str = str(name)
+        self._static_name: str = name
 
         # Callbacks are executed any time the value for the parameter changes (i.e., its value changes)
 
@@ -215,22 +213,22 @@ class ParameterBase(Node):
 
         # Store the transformation. This allows to disentangle the value of the parameter which the user interact
         # width with the value of the parameter the fitting engine (or the Bayesian sampler) interact with
-        if transformation is not None:
-            if not isinstance(transformation, ParameterTransformation):
+        if transformation is not None and not isinstance(
+            transformation, ParameterTransformation
+        ):
+            log.error("transformation is not of ParameterTransform ")
 
-                log.error("transformation is not of ParameterTransform ")
-
-                raise AssertionError()
+            raise AssertionError()
 
         self._transformation: Optional[
             ParameterTransformation] = transformation
 
         # save the transformation so that it can be restored
-        
+
         self._original_transformation: Optional[
             ParameterTransformation] = transformation
 
-        
+
         # Let's store the init value
 
         # NOTE: this will be updated immediately by the _set_value method of the "value" property
@@ -361,11 +359,6 @@ class ParameterBase(Node):
 
                 raise CannotConvertValueToNewUnits()
 
-        else:
-
-            # This is possibly the first time the unit is set
-            pass
-
         # Finally store the new unit
 
         self._unit = new_unit
@@ -402,13 +395,7 @@ class ParameterBase(Node):
 
         new_quantity = self.as_quantity.to(new_unit)
 
-        if as_quantity:
-
-            return new_quantity
-
-        else:
-
-            return new_quantity.value
+        return new_quantity if as_quantity else new_quantity.value
 
     @property
     def has_auxiliary_variable(self) -> bool:
@@ -419,19 +406,16 @@ class ParameterBase(Node):
     #@property
     def has_transformation(self) -> bool:
 
-        if (self._transformation is None) or (not astromodels_config.modeling.use_parameter_transforms):
-
-            return False
-
-        else:
-
-            return True
+        return bool(
+            self._transformation is not None
+            and astromodels_config.modeling.use_parameter_transforms
+        )
 
     @property
     def transformation(self) -> Optional[ParameterTransformation]:
 
         if astromodels_config.modeling.use_parameter_transforms:
-        
+
             return self._transformation
 
         else:
@@ -454,13 +438,13 @@ class ParameterBase(Node):
         old_value = self.value
 
         # now erase the transform
-        
+
         self._transformation = None
 
         # restore the value which
         # will now be done without
         # the transformation
-        
+
         self.value = old_value
 
     def restore_transformation(self) -> None:
@@ -476,13 +460,13 @@ class ParameterBase(Node):
         old_value = self.value
 
         # now reset
-        
+
         self._transformation = self._original_transformation
 
         # restore the value which
         # will now be done without
         # the transformation
-        
+
         self.value = old_value
 
         
@@ -594,8 +578,7 @@ class ParameterBase(Node):
 
                 except:
 
-                    log.exception("Could not call callback for parameter %s" %
-                                  self.name)
+                    log.exception(f"Could not call callback for parameter {self.name}")
 
                     raise NotCallableOrErrorInCall()
 
@@ -616,7 +599,7 @@ class ParameterBase(Node):
 
         # NOTE: we don't need here to deal with auxiliary variables because if one is defined, the parameter is not
         # free thus it will not be touched by the fitting engine
-        if not self._aux_variable is None:
+        if self._aux_variable is not None:
 
             log.error("You cannot get the internal value of a parameter which has an auxiliary "
             "variable")
@@ -662,9 +645,10 @@ class ParameterBase(Node):
 
                 if self._transformation.is_positive:
 
-                    assert min_value > 0.0, (
-                        "The transformation %s is postive definite and the min_value was set to a negative number for %s "
-                        % (type(self._transformation), self.path))
+                    assert (
+                        min_value > 0.0
+                    ), f"The transformation {type(self._transformation)} is postive definite and the min_value was set to a negative number for {self.path} "
+
 
                 try:
 
@@ -678,16 +662,15 @@ class ParameterBase(Node):
                         (min_value, type(self._transformation), self.path))
 
                     raise ValueError()
-            else:
+            elif self._transformation.is_positive:
 
-                if self._transformation.is_positive:
+                # set it by default to for the user
+                min_value = 1e-99
 
-                    # set it by default to for the user
-                    min_value = 1e-99
+                log.warning(
+                    f"We have set the min_value of {self.path} to 1e-99 because there was a postive transform"
+                )
 
-                    log.warning(
-                        "We have set the min_value of %s to 1e-99 because there was a postive transform"
-                        % self.path)
 
         # Store the minimum as a pure float
 
@@ -733,22 +716,19 @@ class ParameterBase(Node):
         """
 
         if self.min_value is None:
-
             # No minimum set
 
             return None
 
+        # There is a minimum. If there is a transformation, use it, otherwise just return the minimum
+
+        if self._transformation is None:
+
+            return self._external_min_value
+
         else:
 
-            # There is a minimum. If there is a transformation, use it, otherwise just return the minimum
-
-            if self._transformation is None:
-
-                return self._external_min_value
-
-            else:
-
-                return self._transformation.forward(self._external_min_value)
+            return self._transformation.forward(self._external_min_value)
 
     # Define the property "max_value"
 
@@ -802,22 +782,19 @@ class ParameterBase(Node):
         """
 
         if self.max_value is None:
-
             # No minimum set
 
             return None
 
+        # There is a minimum. If there is a transformation, use it, otherwise just return the minimum
+
+        if self._transformation is None:
+
+            return self._external_max_value
+
         else:
 
-            # There is a minimum. If there is a transformation, use it, otherwise just return the minimum
-
-            if self._transformation is None:
-
-                return self._external_max_value
-
-            else:
-
-                return self._transformation.forward(self._external_max_value)
+            return self._transformation.forward(self._external_max_value)
 
     def _set_bounds(self, bounds) -> None:
         """Sets the boundaries for this parameter to min_value and max_value"""
@@ -873,11 +850,7 @@ class ParameterBase(Node):
         Returns an exact copy of the current parameter
         """
 
-        # Deep copy everything to make sure that there are no ties between the new instance and the old one
-
-        new_parameter = copy.deepcopy(self)
-
-        return new_parameter
+        return copy.deepcopy(self)
 
     def to_dict(self, minimal=False) -> Dict[str, Any]:
         """Returns the representation for serialization"""
@@ -974,7 +947,7 @@ class Parameter(ParameterBase):
             transformation=transformation,
         )
 
-        self._free: bool = bool(free)
+        self._free: bool = free
 
         # Set delta if provided, otherwise use default
 
@@ -986,14 +959,7 @@ class Parameter(ParameterBase):
 
             # Default is 10% of the value, unless the value is zero, in which case the delta is 0.1
 
-            if self.value == 0:
-
-                self._delta = 0.1
-
-            else:
-
-                self._delta = abs(0.1 * self.value)
-
+            self._delta = 0.1 if self.value == 0 else abs(0.1 * self.value)
         # pre-defined prior is no prior
         self._prior = None
 
@@ -1015,7 +981,7 @@ class Parameter(ParameterBase):
         # is removed)
         self._old_free = self._free
 
-        self._is_normalization = bool(is_normalization)
+        self._is_normalization = is_normalization
 
     @property
     def is_normalization(self) -> bool:
@@ -1045,60 +1011,53 @@ class Parameter(ParameterBase):
         """
 
         if self._transformation is None:
-
             return self._delta
 
-        else:
+        delta_int = None
 
-            delta_int = None
+        for _ in range(2):
+            # Try using the low bound
 
-            for i in range(2):
-
-                # Try using the low bound
-
-                low_bound_ext = self.value - self.delta
+            low_bound_ext = self.value - self.delta
 
                 # Make sure we are within the margins
 
-                if low_bound_ext > self.min_value:
+            if low_bound_ext > self.min_value:
 
-                    # Ok, let's use that for the delta
-                    low_bound_int = self._transformation.forward(low_bound_ext)
+                # Ok, let's use that for the delta
+                low_bound_int = self._transformation.forward(low_bound_ext)
 
-                    delta_int = abs(low_bound_int - self._get_internal_value())
+                delta_int = abs(low_bound_int - self._get_internal_value())
+
+                break
+
+            else:
+
+                # Nope, try with the hi bound
+
+                hi_bound_ext = self.value + self._delta
+
+                if hi_bound_ext < self.max_value:
+
+                    # Ok, let's use it
+                    hi_bound_int = self._transformation.forward(hi_bound_ext)
+                    delta_int = abs(hi_bound_int - self._get_internal_value())
 
                     break
 
                 else:
 
-                    # Nope, try with the hi bound
+                    # Fix delta
+                    self.delta = abs(self.value - self.min_value) / 4.0
 
-                    hi_bound_ext = self.value + self._delta
+                    if self.delta == 0:
 
-                    if hi_bound_ext < self.max_value:
+                        # Parameter at the minimum
+                        self.delta = abs(self.value - self.max_value) / 4.0
 
-                        # Ok, let's use it
-                        hi_bound_int = self._transformation.forward(hi_bound_ext)
-                        delta_int = abs(hi_bound_int - self._get_internal_value())
+        assert delta_int is not None, "Bug"
 
-                        break
-
-                    else:
-
-                        # Fix delta
-                        self.delta = abs(self.value - self.min_value) / 4.0
-
-                        if self.delta == 0:
-
-                            # Parameter at the minimum
-                            self.delta = abs(self.value - self.max_value) / 4.0
-
-                        # Try again
-                        continue
-
-            assert delta_int is not None, "Bug"
-
-            return delta_int
+        return delta_int
 
     # Define the property "prior"
 
@@ -1180,7 +1139,7 @@ class Parameter(ParameterBase):
 
             log.error("Parameter %s does not have a defined minimum. Set one first, then re-run "
                 "set_uninformative_prior" % self.path)
-            
+
             raise ParameterMustHaveBounds( )
 
         else:
@@ -1191,17 +1150,18 @@ class Parameter(ParameterBase):
 
             except SettingOutOfBounds:
 
-                log.error( "Cannot use minimum of %s for prior %s"
-                    % (self.min_value, prior_instance.name)
+                log.error(
+                    f"Cannot use minimum of {self.min_value} for prior {prior_instance.name}"
                 )
-                
+
+
                 raise SettingOutOfBounds( )
 
         if self.max_value is None:
 
             log.error( "Parameter %s does not have a defined maximum. Set one first, then re-run "
                 "set_uninformative_prior" % self.path)
-            
+
             raise ParameterMustHaveBounds( )
 
         else:  # pragma: no cover
@@ -1212,27 +1172,25 @@ class Parameter(ParameterBase):
 
             except SettingOutOfBounds:
 
-                log.error("Cannot use maximum of %s for prior %s"
-                    % (self.max_value, prior_instance.name))
-                
+                log.error(
+                    f"Cannot use maximum of {self.max_value} for prior {prior_instance.name}"
+                )
+
+
                 raise SettingOutOfBounds( )
 
         if not np.isfinite(prior_instance.upper_bound.value):
 
-            log.error(
-            "The parameter %s must have a finite maximum" % self.name
-        )
+            log.error(f"The parameter {self.name} must have a finite maximum")
 
             raise AssertionError()
-            
+
         if not np.isfinite(prior_instance.lower_bound.value):
 
-            log.error(
-            "The parameter %s must have a finite minimum" % self.name
-        )
+            log.error(f"The parameter {self.name} must have a finite minimum")
 
             raise AssertionError()
-            
+
         self._set_prior(prior_instance)
 
     # Define property "free"
@@ -1378,7 +1336,7 @@ class Parameter(ParameterBase):
 
             if self._prior is not None:
 
-                representation += " [prior: %s]" % self.prior.name
+                representation += f" [prior: {self.prior.name}]"
 
         else:
 
@@ -1405,20 +1363,14 @@ class Parameter(ParameterBase):
         # Add wether is a normalization or not
         data["is_normalization"] = self._is_normalization
 
-        if minimal:
-
-            # No need to add anything
-            pass
-
-        else:
-
+        if not minimal:
             # In the complete representation we output everything is needed to re-build the object
 
             if self.has_auxiliary_variable:
 
                 # Store the function and the auxiliary variable
 
-                data["value"] = "f(%s)" % self._aux_variable["variable"]._get_path()
+                data["value"] = f'f({self._aux_variable["variable"]._get_path()})'
 
                 aux_variable_law_data = collections.OrderedDict()
                 aux_variable_law_data[
@@ -1447,54 +1399,36 @@ class Parameter(ParameterBase):
         max_value = self.max_value
         value = self.value
 
-        if (min_value is not None) or (max_value is not None):
-
-            # If _value is zero, then std will be zero, which doesn't make sense
-            assert value != 0, (
-                "You cannot randomize parameter %s because its value is exactly zero"
-                % self.path
-            )
-
-            # Bounded parameter. Use a truncated normal so we are guaranteed
-            # to have a random value within the boundaries
-
-            std = abs(variance * value)
-
-            if min_value is not None:
-
-                a = (min_value - value) / std
-
-            else:
-
-                a = -np.inf
-
-            if max_value is not None:
-
-                b = (max_value - value) / std
-
-            else:
-
-                b = np.inf
-
-            sample = scipy.stats.truncnorm.rvs(a, b, loc=value, scale=std, size=1)
-
-            if (min_value is not None and sample < min_value) or (
-                max_value is not None and sample > max_value
-            ):  # pragma: no cover
-
-                # This should never happen
-
-                raise AssertionError(
-                    "Got a sample outside of the boundaries of the truncated normal distribution"
-                )
-
-            return sample[0]
-
-        else:
-
+        if min_value is None and max_value is None:
             # The parameter has no boundaries
 
             return np.random.normal(value, abs(variance * value))
+            # If _value is zero, then std will be zero, which doesn't make sense
+        assert (
+            value != 0
+        ), f"You cannot randomize parameter {self.path} because its value is exactly zero"
+
+
+        # Bounded parameter. Use a truncated normal so we are guaranteed
+        # to have a random value within the boundaries
+
+        std = abs(variance * value)
+
+        a = (min_value - value) / std if min_value is not None else -np.inf
+        b = (max_value - value) / std if max_value is not None else np.inf
+        sample = scipy.stats.truncnorm.rvs(a, b, loc=value, scale=std, size=1)
+
+        if (min_value is not None and sample < min_value) or (
+            max_value is not None and sample > max_value
+        ):  # pragma: no cover
+
+            # This should never happen
+
+            raise AssertionError(
+                "Got a sample outside of the boundaries of the truncated normal distribution"
+            )
+
+        return sample[0]
 
 
 class IndependentVariable(ParameterBase):

@@ -1002,7 +1002,7 @@ class Band_Calderone(Function1D, metaclass=FunctionMeta):
 
     def evaluate(self, x, alpha, beta, xp, F, a, b, opt):
 
-        assert opt == 0 or opt == 1, "Opt must be either 0 or 1"
+        assert opt in [0, 1], "Opt must be either 0 or 1"
 
         if alpha < beta:
             raise ModelAssertionViolation("Alpha cannot be smaller than beta")
@@ -1012,14 +1012,7 @@ class Band_Calderone(Function1D, metaclass=FunctionMeta):
 
         # Cutoff energy
 
-        if alpha == -2:
-
-            Ec = old_div(xp, 0.0001)  # TRICK: avoid a=-2
-
-        else:
-
-            Ec = old_div(xp, (2 + alpha))
-
+        Ec = old_div(xp, 0.0001) if alpha == -2 else old_div(xp, (2 + alpha))
         # Split energy
 
         Esplit = (alpha - beta) * Ec
@@ -1050,25 +1043,19 @@ class Band_Calderone(Function1D, metaclass=FunctionMeta):
 
             intflux = self.ggrb_int_cpl(alpha_, Ec_, a_, b_)
 
+        elif a <= Esplit <= b:
+
+            intflux = self.ggrb_int_cpl(
+                alpha_, Ec_, a_, Esplit_
+            ) + nb_func.ggrb_int_pl(alpha_, beta_, Ec_, Esplit_, b_)
+
         else:
 
-            # Band model
-
-            if a <= Esplit and Esplit <= b:
-
-                intflux = self.ggrb_int_cpl(
-                    alpha_, Ec_, a_, Esplit_
-                ) + nb_func.ggrb_int_pl(alpha_, beta_, Ec_, Esplit_, b_)
-
-            else:
-
-                if Esplit < a:
-
-                    intflux = nb_func.ggrb_int_pl(alpha_, beta_, Ec_, a_, b_)
-
-                else:
-
-                    intflux = nb_func.ggrb_int_cpl(alpha_, Ec_, a_, b_)
+            intflux = (
+                nb_func.ggrb_int_pl(alpha_, beta_, Ec_, a_, b_)
+                if Esplit < a
+                else nb_func.ggrb_int_cpl(alpha_, Ec_, a_, b_)
+            )
 
         norm = F * erg2keV / (intflux * unit_)
 
@@ -1189,7 +1176,7 @@ class DoubleSmoothlyBrokenPowerlaw(Function1D, metaclass=FunctionMeta):
                          piv.value,
                          self.y_unit
                 )
-            
+
             else:
 
                 return ( x,

@@ -21,14 +21,7 @@ class SpectralComponent(Node):
 
         # Store the polarization
 
-        if polarization is None:
-
-            self._polarization = Polarization()
-
-        else:
-
-            self._polarization = polarization
-
+        self._polarization = Polarization() if polarization is None else polarization
         # Add shape and polarization as children
 
         Node.__init__(self, name)

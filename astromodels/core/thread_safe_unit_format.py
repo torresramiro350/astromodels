@@ -23,7 +23,7 @@ def _format_one(xxx_todo_changeme):
     # but only 'cm' if base=cm and power=1
 
     (base, power) = xxx_todo_changeme
-    return "%s%s" % (base.to_string(), power if power != 1 else '')
+    return f"{base.to_string()}{power if power != 1 else ''}"
 
 
 class ThreadSafe(Base):
@@ -75,4 +75,4 @@ class ThreadSafe(Base):
 
         tokens = list(map(_format_one, list(zip(unit.bases, unit.powers))))
 
-        return str(" ".join(tokens))
+        return " ".join(tokens)

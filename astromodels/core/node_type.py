@@ -15,9 +15,7 @@ log = setup_logger(__name__)
 class NewNodeUnpickler(object):
     def __call__(self, cls):
 
-        instance = cls.__new__(cls)
-
-        return instance
+        return cls.__new__(cls)
 
 
 @dataclass(repr=False, unsafe_hash=True)
@@ -33,8 +31,7 @@ class NodeBase:
 
     def __reduce__(self):
 
-        state = {}
-        state["parent"] = self._get_parent()
+        state = {"parent": self._get_parent()}
         state["path"] = self._path
         state["children"] = self._get_children()
         state["child_names"] = [child.name for child in state["children"]]
@@ -248,11 +245,7 @@ class NodeBase:
         """
         returns the str path of this node
         """
-        if self._parent is not None:
-            return self._path
-
-        else:
-            return self._name
+        return self._path if self._parent is not None else self._name
 
     def _root(self, source_only: bool = False) -> "NodeBase":
         """
@@ -262,28 +255,23 @@ class NodeBase:
         if self.is_root:
             return self
 
-        else:
-
-            current_node = self
+        current_node = self
 
             # recursively walk up the tree to
             # the root
 
-            while True:
+        while True:
 
-                parent = current_node._parent
+            parent = current_node._parent
 
-                if source_only:
+            if source_only and parent.name == "__root__":
+                return current_node
 
-                    if parent.name == "__root__":
+            current_node = current_node._parent
 
-                        return current_node
+            if current_node.is_root:
 
-                current_node = current_node._parent
-
-                if current_node.is_root:
-
-                    return current_node
+                return current_node
 
     @property
     def path(self) -> str:
@@ -336,12 +324,7 @@ class NodeBase:
         """
         is this a a leaf of the tree
         """
-        if len(self._children) == 0:
-            return True
-
-        else:
-
-            return False
+        return len(self._children) == 0
 
     @property
     def name(self) -> str:
@@ -369,39 +352,31 @@ class NodeBase:
         ### but if the node has a value
         ### attribute, we want to call that
 
-        if "_children" in self.__dict__:
-            if name in self._children:
-
-                if "_internal_value" in self._children[name].__dict__:
-
-                    if not self._children[name].is_leaf:
-
-                        log.warning(
-                            f"Trying to set the value of a linked parameter ({name}) directly has no effect "
-                        )
-
-                        return
-
-                    else:
-                        # ok, this is likely  parameter
-
-                        self._children[name].value = value
-
-                else:
-
-                    # this is going to be a node which
-                    # we are not allowed to erase
-
-                    # log.error(f"Accessing an element {name} of the node that does not exist")
-
-                    raise AttributeError(
-                        f"Accessing an element {name} of the node that does not exist"
-                    )
-            else:
-                return super().__setattr__(name, value)
-        else:
-
+        if "_children" not in self.__dict__:
             return super().__setattr__(name, value)
+        if name not in self._children:
+            return super().__setattr__(name, value)
+        if "_internal_value" not in self._children[name].__dict__:
+            # this is going to be a node which
+            # we are not allowed to erase
+
+            # log.error(f"Accessing an element {name} of the node that does not exist")
+
+            raise AttributeError(
+                f"Accessing an element {name} of the node that does not exist"
+            )
+        if not self._children[name].is_leaf:
+
+            log.warning(
+                f"Trying to set the value of a linked parameter ({name}) directly has no effect "
+            )
+
+            return
+
+        else:
+            # ok, this is likely  parameter
+
+            self._children[name].value = value
 
     def plot_tree(self) -> None:
         """

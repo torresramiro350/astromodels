@@ -113,7 +113,7 @@ extensions = [
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
     'sphinx_gallery.load_style',
-    
+
 ]
 
 
@@ -179,7 +179,7 @@ path = os.path.join('_static', 'pygments')
 if not os.path.isdir(path):
     os.mkdir(path)
 for style in get_all_styles():
-    path = os.path.join('_static', 'pygments', style + '.css')
+    path = os.path.join('_static', 'pygments', f'{style}.css')
     if os.path.isfile(path):
         continue
     with open(path, 'w') as f:

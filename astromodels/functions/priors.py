@@ -88,15 +88,11 @@ class Gaussian(Function1D, metaclass=FunctionMeta):
 
         sqrt_two = 1.414213562
 
-        if x < 1e-16 or (1 - x) < 1e-16:
-
-            res = -1e32
-
-        else:
-
-            res = mu + sigma * sqrt_two * erfcinv(2 * (1 - x))
-
-        return res
+        return (
+            -1e32
+            if x < 1e-16 or x > 1 - 1e-16
+            else mu + sigma * sqrt_two * erfcinv(2 * (1 - x))
+        )
 
 class Truncated_gaussian(Function1D, metaclass=FunctionMeta):
     r"""
@@ -220,7 +216,7 @@ class Truncated_gaussian(Function1D, metaclass=FunctionMeta):
 
         sqrt_two = 1.414213562
 
-        if x < 1e-16 or (1 - x) < 1e-16:
+        if x < 1e-16 or x > 1 - 1e-16:
             res = -1e32
 
         # precalculate the arguments to the  CDF
@@ -237,7 +233,7 @@ class Truncated_gaussian(Function1D, metaclass=FunctionMeta):
         arg = theta_lower + x * (theta_upper - theta_lower)
 
         out = mu + sigma * sqrt_two * erfcinv(2 * (1 - arg))
-        
+
         return np.clip(out, lower_bound, upper_bound)
 
 class Cauchy(Function1D, metaclass=FunctionMeta):
@@ -313,9 +309,7 @@ class Cauchy(Function1D, metaclass=FunctionMeta):
 
         half_pi = 1.57079632679
 
-        res = np.tan(np.pi * x - half_pi) * gamma + x0
-
-        return res
+        return np.tan(np.pi * x - half_pi) * gamma + x0
 
 
 class Cosine_Prior(Function1D, metaclass=FunctionMeta):
@@ -511,13 +505,13 @@ class Log_normal(Function1D, metaclass=FunctionMeta):
         mu = self.mu.value
         sigma = self.sigma.value
 
-        sqrt_two = 1.414213562
-
-        if x < 1e-16 or (1 - x) < 1e-16:
+        if x < 1e-16 or x > 1 - 1e-16:
 
             res = -1e32
 
         else:
+
+            sqrt_two = 1.414213562
 
             res = mu + sigma * sqrt_two * erfcinv(2 * (1 - x))
 
@@ -596,11 +590,7 @@ class Uniform_prior(Function1D, metaclass=FunctionMeta):
         upper_bound = self.upper_bound.value
 
         low = lower_bound
-        spread = float(upper_bound - lower_bound)
-
-        par = x * spread + low
-
-        return par
+        return x * float(upper_bound - low) + low
 
 class Log_uniform_prior(Function1D, metaclass=FunctionMeta):
     r"""
@@ -651,13 +641,7 @@ class Log_uniform_prior(Function1D, metaclass=FunctionMeta):
 
         res = np.where((x > lower_bound) & (x < upper_bound), old_div(K, x), 0)
 
-        if isinstance(x, astropy_units.Quantity):
-
-            return res * self.y_unit
-
-        else:
-
-            return res
+        return res * self.y_unit if isinstance(x, astropy_units.Quantity) else res
 
     def from_unit_cube(self, x):
         """
@@ -673,6 +657,4 @@ class Log_uniform_prior(Function1D, metaclass=FunctionMeta):
         up = math.log10(self.upper_bound.value)
 
         spread = up - low
-        par = 10 ** (x * spread + low)
-
-        return par
+        return 10 ** (x * spread + low)

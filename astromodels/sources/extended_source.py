@@ -140,7 +140,7 @@ class ExtendedSource(Source, Node):
         return self._spatial_shape
 
     def get_spatially_integrated_flux( self, energies):
-    
+
         """
         Returns total flux of source at the given energy
         :param energies: energies (array or float)
@@ -154,23 +154,7 @@ class ExtendedSource(Source, Node):
 
         results = [self.spatial_shape.get_total_spatial_integral(energies) * component.shape(energies) for component in self.components.values()]
 
-        if isinstance(energies, u.Quantity):
-
-            # Slow version with units
-
-            # We need to sum like this (slower) because using np.sum will not preserve the units
-            # (thanks astropy.units)
-
-            differential_flux = sum(results)
-
-        else:
-
-            # Fast version without units, where x is supposed to be in the same units as currently defined in
-            # units.get_units()
-
-            differential_flux = np.sum(results, 0)
-
-        return differential_flux
+        return sum(results) if isinstance(energies, u.Quantity) else np.sum(results, 0)
 
 
     def __call__(self, lon, lat, energies):
@@ -182,7 +166,10 @@ class ExtendedSource(Source, Node):
         :return: differential flux at given position and energy
         """
 
-        assert type(lat) == type(lon) and type(lon) == type(energies), "Type mismatch in input of call"
+        assert (
+            type(lat) == type(lon) == type(energies)
+        ), "Type mismatch in input of call"
+
 
         if not isinstance(lat, np.ndarray):
 
@@ -250,13 +237,7 @@ class ExtendedSource(Source, Node):
 
                     return True
 
-        for par in list(self.spatial_shape.parameters.values()):
-
-            if par.free:
-
-                return True
-
-        return False
+        return any(par.free for par in list(self.spatial_shape.parameters.values()))
 
     @property
     def free_parameters(self):
@@ -320,7 +301,7 @@ class ExtendedSource(Source, Node):
 
         repr_dict = collections.OrderedDict()
 
-        key = '%s (extended source)' % self.name
+        key = f'{self.name} (extended source)'
 
         repr_dict[key] = collections.OrderedDict()
         repr_dict[key]['shape'] = self._spatial_shape.to_dict(minimal=True)

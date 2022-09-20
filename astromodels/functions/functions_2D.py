@@ -280,17 +280,17 @@ class Asymm_Gaussian_on_sphere(Function2D, metaclass=FunctionMeta):
         lon, lat = x,y
 
         b = a * np.sqrt(1. - e**2)
-        
+
         dX = np.atleast_1d( angular_distance( lon0, lat0, lon, lat0) )
         dY = np.atleast_1d( angular_distance( lon0, lat0, lon0, lat) )
 
         dlon = lon - lon0
         if isinstance( dlon, u.Quantity):
             dlon = (dlon.to(u.degree)).value
-        
+
         idx=np.logical_and( np.logical_or( dlon < 0, dlon > 180), np.logical_or( dlon>-180, dlon < -360) )
         dX[idx] = -dX[idx]
-        
+
         idx = lat < lat0 
         dY[idx]=-dY[idx]
 
@@ -301,9 +301,9 @@ class Asymm_Gaussian_on_sphere(Function2D, metaclass=FunctionMeta):
 
         cos2_phi = np.power( np.cos( phi * np.pi/180.), 2)
         sin2_phi = np.power( np.sin( phi * np.pi/180.), 2)
-        
+
         sin_2phi = np.sin( 2. * phi * np.pi/180.)
-        
+
         A = old_div(cos2_phi, (2.*b**2)) + old_div(sin2_phi, (2.*a**2))
 
         B = old_div(- sin_2phi, (4.*b**2)) + old_div(sin_2phi, (4.*a**2))
@@ -525,7 +525,7 @@ class Ellipse_on_sphere(Function2D, metaclass=FunctionMeta):
           bearing = 90. - (theta.to(u.degree)).value
         else:
           bearing = 90. - theta
-          
+
         # coordinates of focal points
         lon1, lat1 = vincenty(lon0, lat0, bearing, f)
         lon2, lat2 = vincenty(lon0, lat0, bearing + 180., f)
@@ -653,12 +653,12 @@ class SpatialTemplate_2D(Function2D, metaclass=FunctionMeta):
     def _load_file(self):
 
         self._fitsfile=self.fits_file.value
-        
+
         with fits.open(self._fitsfile) as f:
-    
+
             self._wcs = wcs.WCS( header = f[int(self.ihdu.value)].header )
             self._map = f[int(self.ihdu.value)].data
-              
+
             self._nX = f[int(self.ihdu.value)].header['NAXIS1']
             self._nY = f[int(self.ihdu.value)].header['NAXIS2']
 
@@ -666,15 +666,18 @@ class SpatialTemplate_2D(Function2D, metaclass=FunctionMeta):
             #see http://docs.astropy.org/en/stable/io/fits/#working-with-image-data
             assert self._map.shape[1] == self._nX, "NAXIS1 = %d in fits header, but %d in map" % (self._nX, self._map.shape[1])
             assert self._map.shape[0] == self._nY, "NAXIS2 = %d in fits header, but %d in map" % (self._nY, self._map.shape[0])
-            
+
             #test if the map is normalized as expected
             area = wcs.utils.proj_plane_pixel_area( self._wcs )
             dOmega = (area*u.deg*u.deg).to(u.sr).value
             total = self._map.sum() * dOmega
 
             if not np.isclose( total, 1,  rtol=1e-2):
-                log.warning("2D template read from {} is normalized to {} (expected: 1)".format(self._fitsfile, total) )
-            
+                log.warning(
+                    f"2D template read from {self._fitsfile} is normalized to {total} (expected: 1)"
+                )
+
+
             #hash sum uniquely identifying the template function (defined by its 2D map array and coordinate system)
             #this is needed so that the memoization won't confuse different SpatialTemplate_2D objects.
             h = hashlib.sha224()
@@ -726,25 +729,25 @@ class SpatialTemplate_2D(Function2D, metaclass=FunctionMeta):
         return np.multiply(K, out)
 
     def get_boundaries(self):
-    
+
         # if self._map is None:
-            
+
         #     self.load_file(self._fitsfile)
-          
+
         #We use the max/min RA/Dec of the image corners to define the boundaries.
         #Use the 'outside' of the pixel corners, i.e. from pixel 0 to nX in 0-indexed accounting.
-    
+
         Xcorners = np.array( [0, 0,        self._nX, self._nX] )
         Ycorners = np.array( [0, self._nY, 0,        self._nY] )
-        
+
         corners = SkyCoord.from_pixel( Xcorners, Ycorners, wcs=self._wcs, origin = 0).transform_to(self.frame.value)  
-     
+
         min_lon = min(corners.ra.degree)
         max_lon = max(corners.ra.degree)
-        
+
         min_lat = min(corners.dec.degree)
         max_lat = max(corners.dec.degree)
-        
+
         return (min_lon, max_lon), (min_lat, max_lat)
 
 

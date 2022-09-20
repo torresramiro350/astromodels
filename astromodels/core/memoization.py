@@ -70,20 +70,17 @@ def memoize(method):
         result = _get(key)
 
         if result is not None:
-
             return result
 
-        else:
+        result = method(instance, x, *args, **kwargs)
 
-            result = method(instance, x, *args, **kwargs)
+        cache[key] = result
 
-            cache[key] = result
+        if len(cache) > _CACHE_SIZE:
+            # Remove half of the element (but at least 1, even if _CACHE_SIZE=1, which would be pretty idiotic ;-) )
+            [_popitem(False) for i in range(max(_CACHE_SIZE // 2, 1))]
 
-            if len(cache) > _CACHE_SIZE:
-                # Remove half of the element (but at least 1, even if _CACHE_SIZE=1, which would be pretty idiotic ;-) )
-                [_popitem(False) for i in range(max(_CACHE_SIZE // 2, 1))]
-
-            return result
+        return result
 
     # Add the function as a "attribute" so we can access it
     memoizer.input_object = method

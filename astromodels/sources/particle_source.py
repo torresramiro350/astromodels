@@ -88,7 +88,7 @@ class ParticleSource(Source, Node):
 
         repr_dict = collections.OrderedDict()
 
-        key = '%s (particle source)' % self.name
+        key = f'{self.name} (particle source)'
 
         repr_dict[key] = collections.OrderedDict()
         repr_dict[key]['spectrum'] = collections.OrderedDict()

@@ -86,7 +86,7 @@ class TemplateModelFactory(object):
 
         # Enforce that it does not contain spaces nor strange characters
 
-        name: str = str(name)
+        name: str = name
 
         if re.match("[a-zA-Z_][a-zA-Z0-9_]*", name) is None:
             log.error(
@@ -97,7 +97,7 @@ class TemplateModelFactory(object):
 
         self._name: str = name
 
-        self._description: str = str(description)
+        self._description: str = description
 
         # Store energy grid
 
@@ -130,7 +130,7 @@ class TemplateModelFactory(object):
 
         self._interpolation_degree: int = interpolation_degree
 
-        self._spline_smoothing_factor: int = int(spline_smoothing_factor)
+        self._spline_smoothing_factor: int = spline_smoothing_factor
 
     def define_parameter_grid(
         self, parameter_name: str, grid: np.ndarray
@@ -140,7 +140,7 @@ class TemplateModelFactory(object):
         Pass the name of the parameter and the array of values that it will take in the grid
         """
 
-        if not parameter_name in self._parameters_grids:
+        if parameter_name not in self._parameters_grids:
 
             log.error(f"Parameter {parameter_name} is not part of this model")
 
@@ -148,7 +148,7 @@ class TemplateModelFactory(object):
 
         grid_ = np.array(grid)
 
-        if not (grid_.shape[0] > 1):
+        if grid_.shape[0] <= 1:
 
             log.error(
                 "A grid for a parameter must contain at least two elements"
@@ -193,11 +193,7 @@ class TemplateModelFactory(object):
 
         if self._data_frame is None:
 
-            shape = []
-
-            for k, v in self._parameters_grids.items():
-
-                shape.append(len(v))
+            shape = [len(v) for k, v in self._parameters_grids.items()]
 
             shape.append(self._energies.shape[0])
 
@@ -207,19 +203,19 @@ class TemplateModelFactory(object):
 
             log.debug(f"grid shape actual: {self._data_frame.shape}")
 
-            # This is the first data set, create the data frame
+                # This is the first data set, create the data frame
 
-            # Create the multi-index
+                # Create the multi-index
 
-            # self._multi_index = pd.MultiIndex.from_product(
-            #     list(self._parameters_grids.values()),
-            #     names=list(self._parameters_grids.keys()),
-            # )
+                # self._multi_index = pd.MultiIndex.from_product(
+                #     list(self._parameters_grids.values()),
+                #     names=list(self._parameters_grids.keys()),
+                # )
 
-            # # Pre-fill the data matrix with nans, so we will know if some elements have not been filled
+                # # Pre-fill the data matrix with nans, so we will know if some elements have not been filled
 
-            # self._data_frame = pd.DataFrame(index=self._multi_index,
-            #                                 columns=self._energies)
+                # self._data_frame = pd.DataFrame(index=self._multi_index,
+                #                                 columns=self._energies)
 
         # Make sure we have all parameters and order the values in the same way as the dictionary
 
@@ -227,7 +223,7 @@ class TemplateModelFactory(object):
 
         for i, (k, v) in enumerate(self._parameters_grids.items()):
 
-            if not k in parameters_values_input:
+            if k not in parameters_values_input:
 
                 log.error(f"Parameter {k} is not in input")
 
@@ -241,7 +237,7 @@ class TemplateModelFactory(object):
 
         # If the user did not specify one of the parameters, then the parameters_values array will contain nan
 
-        if not len(parameter_idx) == len(self._parameters_grids):
+        if len(parameter_idx) != len(self._parameters_grids):
 
             log.error("You didn't specify all parameters' values.")
 
@@ -264,7 +260,7 @@ class TemplateModelFactory(object):
 
         # Now let's check for valid inputs
 
-        if not self._energies.shape[0] == differential_fluxes.shape[0]:
+        if self._energies.shape[0] != differential_fluxes.shape[0]:
 
             log.error(
                 "Differential fluxes and energies must have "
@@ -322,8 +318,6 @@ class TemplateModelFactory(object):
                 "that you didn't fill it up completely, or that some of "
                 "your data contains nans. Cannot save the file."
             )
-
-            raise AssertionError()
 
             raise AssertionError()
 
@@ -730,13 +724,12 @@ class TemplateModel(with_metaclass(FunctionMeta, Function1D)):
 
                 this_interpolator = GridInterpolate(
                     tuple(
-                        [
-                            np.array(x, dtype="<f8")
-                            for x in list(self._parameters_grids.values())
-                        ]
+                        np.array(x, dtype="<f8")
+                        for x in list(self._parameters_grids.values())
                     ),
                     this_data,
                 )
+
 
             self._interpolators.append(this_interpolator)
 
@@ -772,14 +765,7 @@ class TemplateModel(with_metaclass(FunctionMeta, Function1D)):
 
             scale = scale.to(1 / u.keV).value
 
-        if self._is_log10:
-
-            log_energies = np.log10(energies)
-
-        else:
-
-            log_energies = energies
-
+        log_energies = np.log10(energies) if self._is_log10 else energies
         e_tilde = self._energies * scale
 
         # Gather all interpolations for these parameters' values at all defined energies
@@ -849,13 +835,11 @@ class TemplateModel(with_metaclass(FunctionMeta, Function1D)):
 
     def to_dict(self, minimal=False):
 
-        data = super(Function1D, self).to_dict(minimal)
-
         # if not minimal:
         #
         #     data['extra_setup'] = {'data_file': self._data_file}
 
-        return data
+        return super(Function1D, self).to_dict(minimal)
 
 
 class XSPECTableModel(object):
@@ -934,10 +918,12 @@ class XSPECTableModel(object):
 
             for i, name in enumerate(self._names):
 
-                this_dict = {}
+                this_dict = {
+                    "pmin": params.data["MINIMUM"][i],
+                    "pmax": params.data["MAXIMUM"][i],
+                }
 
-                this_dict["pmin"] = params.data["MINIMUM"][i]
-                this_dict["pmax"] = params.data["MAXIMUM"][i]
+
                 if self._n_params > 1:
 
                     try:
@@ -980,10 +966,7 @@ class XSPECTableModel(object):
 
         for i in range(self._spectrum.shape[0]):
 
-            input_dict = {}
-            for k, v in self._params_dict.items():
-                input_dict[k] = v["values"][i]
-
+            input_dict = {k: v["values"][i] for k, v in self._params_dict.items()}
             tmf.add_interpolation_data(self._spectrum[i, :], **input_dict)
 
         tmf.save_data(overwrite=overwrite)
@@ -1022,25 +1005,22 @@ def convert_old_table_model(model_name: str):
             match = re.search("p_([0-9]+)_(.+)", key)
 
             if match is None:
-
                 continue
 
-            else:
+            tokens = match.groups()
 
-                tokens = match.groups()
+            this_parameter_number = int(tokens[0])
+            this_parameter_name = str(tokens[1])
 
-                this_parameter_number = int(tokens[0])
-                this_parameter_name = str(tokens[1])
+            if this_parameter_number != processed_parameters:
 
-                if not this_parameter_number == processed_parameters:
+                log.error("Parameters out of order!")
 
-                    log.error("Parameters out of order!")
+                raise AssertionError()
 
-                    raise AssertionError()
+            parameters_grids[this_parameter_name] = store[key]
 
-                parameters_grids[this_parameter_name] = store[key]
-
-                processed_parameters += 1
+            processed_parameters += 1
 
         energies = np.array(store["energies"])
 

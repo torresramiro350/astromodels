@@ -105,25 +105,23 @@ _console_formatter = logging.Formatter(
 
 
 
-_theme = {}
-
-# Banner
-_theme["h1"] = "deep_sky_blue3"
-_theme["status.spinner"] = "cyan2"
-_theme["status.text"] = "deep_sky_blue4"
-_theme["repr.filename"] = "blue"
-_theme["repr.number"] = "white"
-_theme["repr.path"] = "grey37"
-_theme["repr.str"] = "grey37"
-_theme["repr.tag_name"] = "white"
-_theme["repr.url"] = "not bold not italic underline grey84"
-_theme["log.time"] = "green1"
-_theme["log.message"] = f"{astromodels_config.logging.message_style}"
-_theme["logging.level.debug"] = f"{astromodels_config.logging.debug_style}"
-_theme["logging.level.error"] = f"{astromodels_config.logging.error_style}"
-_theme["logging.level.info"] = f"{astromodels_config.logging.info_style}"
-_theme["logging.level.warning"] = f"{astromodels_config.logging.warn_style}"
-
+_theme = {
+    "h1": "deep_sky_blue3",
+    "status.spinner": "cyan2",
+    "status.text": "deep_sky_blue4",
+    "repr.filename": "blue",
+    "repr.number": "white",
+    "repr.path": "grey37",
+    "repr.str": "grey37",
+    "repr.tag_name": "white",
+    "repr.url": "not bold not italic underline grey84",
+    "log.time": "green1",
+    "log.message": f"{astromodels_config.logging.message_style}",
+    "logging.level.debug": f"{astromodels_config.logging.debug_style}",
+    "logging.level.error": f"{astromodels_config.logging.error_style}",
+    "logging.level.info": f"{astromodels_config.logging.info_style}",
+    "logging.level.warning": f"{astromodels_config.logging.warn_style}",
+}
 
 
 #mytheme = Theme().read(_get_data_file_path("log_theme.ini"))

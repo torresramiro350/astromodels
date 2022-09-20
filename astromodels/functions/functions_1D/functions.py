@@ -340,32 +340,28 @@ if has_naima:
         
         def _set_units(self, x_unit, y_unit):
 
-            # This function can only be used as a spectrum,
-            # so let's check that x_unit is a energy and y_unit is
-            # differential flux
-
-            if hasattr(x_unit, "physical_type") and x_unit.physical_type == "energy":
-
-                # Now check that y is a differential flux
-                current_units = get_units()
-                should_be_unitless = y_unit * (
-                    current_units.energy * current_units.time * current_units.area
-                )
-
-                if (
-                    not hasattr(should_be_unitless, "physical_type")
-                    or should_be_unitless.decompose().physical_type != "dimensionless"
-                ):
-                    # y is not a differential flux
-                    raise InvalidUsageForFunction(
-                        "Unit for y is not differential flux. The function synchrotron "
-                        "can only be used as a spectrum."
-                    )
-            else:
-
+            if (
+                not hasattr(x_unit, "physical_type")
+                or x_unit.physical_type != "energy"
+            ):
                 raise InvalidUsageForFunction(
                     "Unit for x is not an energy. The function synchrotron can only be used "
                     "as a spectrum"
+                )
+            # Now check that y is a differential flux
+            current_units = get_units()
+            should_be_unitless = y_unit * (
+                current_units.energy * current_units.time * current_units.area
+            )
+
+            if (
+                not hasattr(should_be_unitless, "physical_type")
+                or should_be_unitless.decompose().physical_type != "dimensionless"
+            ):
+                # y is not a differential flux
+                raise InvalidUsageForFunction(
+                    "Unit for y is not differential flux. The function synchrotron "
+                    "can only be used as a spectrum."
                 )
 
                 # we actually don't need to do anything as the units are already set up
@@ -454,14 +450,12 @@ if has_naima:
 
         def to_dict(self, minimal=False):
 
-            data = super(Function1D, self).to_dict(minimal)
-
             # if not minimal:
             #     data["extra_setup"] = {
             #         "particle_distribution": self.particle_distribution.path
             #     }
 
-            return data
+            return super(Function1D, self).to_dict(minimal)
 
 
 class _ComplexTestFunction(Function1D, metaclass=FunctionMeta):
@@ -534,15 +528,13 @@ class _ComplexTestFunction(Function1D, metaclass=FunctionMeta):
 
     def to_dict(self, minimal=False):
 
-        data = super(Function1D, self).to_dict(minimal)
-
         # if not minimal:
 
         #     data["extra_setup"] = {
         #         "particle_distribution": self.particle_distribution.name
         #     }
 
-        return data
+        return super(Function1D, self).to_dict(minimal)
 
 
 class Log_parabola(Function1D, metaclass=FunctionMeta):

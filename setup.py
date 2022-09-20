@@ -47,15 +47,10 @@ def sanitize_lib_name(library_path):
 
     lib_name = os.path.basename(library_path)
 
-    # Some regexp magic needed to extract in a system-independent (mac/linux) way the library name
-
-    tokens = re.findall("lib(.+)(\.so|\.dylib|\.a)(.+)?", lib_name)
-
-    if not tokens:
+    if tokens := re.findall("lib(.+)(\.so|\.dylib|\.a)(.+)?", lib_name):
+        return tokens[0][0]
+    else:
         raise RuntimeError(f'Attempting to find {lib_name} in directory {library_path} but there are no libraries in this directory')
-
-
-    return tokens[0][0]
 
 
 def find_library(library_root, additional_places=None):
@@ -95,7 +90,7 @@ def find_library(library_root, additional_places=None):
 
             # Windows is not supported
 
-            raise NotImplementedError("Platform %s is not supported" % sys.platform)
+            raise NotImplementedError(f"Platform {sys.platform} is not supported")
 
 
     else:
@@ -118,7 +113,7 @@ def find_library(library_root, additional_places=None):
 
         else:
 
-            raise NotImplementedError("Platform %s is not supported" % sys.platform)
+            raise NotImplementedError(f"Platform {sys.platform} is not supported")
 
         if additional_places is not None:
 
@@ -144,32 +139,31 @@ def find_library(library_root, additional_places=None):
 
 
 
-            if len(results) >= 1:
+            if len(results) < 1:
+                continue
 
                 # Results contain things like libXS.so, libXSPlot.so, libXSpippo.so
                 # If we are looking for libXS.so, we need to make sure that we get the right one!
 
-                for result in results:
+            for result in results:
 
 
-                    if re.match(f"lib{library_root}[\-_\.]([0-9])*\d*(\.[0-9]\d*)*", os.path.basename(result)) is None:
+                if (
+                    re.match(
+                        f"lib{library_root}[\-_\.]([0-9])*\d*(\.[0-9]\d*)*",
+                        os.path.basename(result),
+                    )
+                    is not None
+                ):
 
-                        continue
+                    # FOUND IT
 
-                    else:
+                    # This is the full path of the library, like /usr/lib/libcfitsio_1.2.3.4
 
-                        # FOUND IT
+                    library_name = result
+                    library_dir = search_path
 
-                        # This is the full path of the library, like /usr/lib/libcfitsio_1.2.3.4
-
-                        library_name = result
-                        library_dir = search_path
-
-                        break
-
-            else:
-
-                continue
+                    break
 
             if library_name is not None:
                 break
@@ -196,7 +190,7 @@ def setup_xspec():
 
 
     # thanks to the sherpa team for this
-    
+
     if xspec_version is None:
 
         print("WARN: You have not specified and XSPEC version with the ")
@@ -227,23 +221,23 @@ def setup_xspec():
                                 (12, 11, 0), (12, 11, 1),
                                 (12, 12, 0), (12, 12, 1)]:
 
-        version = '{}.{}.{}'.format(major, minor, patch)
+        version = f'{major}.{minor}.{patch}'
 
-        macro = 'XSPEC_{}_{}_{}'.format(major, minor, patch)
+        macro = f'XSPEC_{major}_{minor}_{patch}'
 
         if xspec_version >= LooseVersion(version):
             macros += [(macro, None)]
-                        
+
     print(macros)
-                
+
     if headas_root is None:
 
         # See, maybe we are running in Conda
-        
+
         if conda_prefix is None:
-            
+
             # Maybe this is a Conda build
-            
+
             conda_prefix = os.environ.get("PREFIX")
 
         if conda_prefix is not None:
@@ -259,7 +253,7 @@ def setup_xspec():
                 # No, there is no library in Conda
                 print("No xspec-modelsonly package has been installed in Conda. Xspec support will not be installed")
 
-                print("Was looking into %s" % conda_lib_path)
+                print(f"Was looking into {conda_lib_path}")
 
                 return None
 
@@ -283,14 +277,14 @@ def setup_xspec():
         print("If you have issues, manually set the ENV variable XSPEC_INC_PATH")
         print("To the location of the XSPEC headers\n\n")
         print("If you are still having issues, unset HEADAS before installing and contact the support team")
-        
+
 
 
     # Make sure these libraries exist and are linkable right now
     # (they need to be in LD_LIBRARY_PATH or DYLD_LIBRARY_PATH or in one of the system paths)
-    
+
     libraries_root = ['XSFunctions', 'XSModel', 'XSUtil', 'XS', 'cfitsio', 'CCfits', 'wcs', 'gfortran']
-            
+
     libraries = []
     library_dirs = []
 
@@ -299,27 +293,27 @@ def setup_xspec():
         this_library, this_library_path = find_library(lib_root, additional_places=[os.path.join(headas_root, 'lib')])
 
         if this_library is None:
+            raise IOError(
+                f"Could not find library {lib_root}. Impossible to compile Xspec"
+            )
 
-            raise IOError("Could not find library %s. Impossible to compile Xspec" % lib_root)
 
-        else:
+        print(f"Found library {this_library} in {this_library_path}")
 
-            print("Found library %s in %s" % (this_library, this_library_path))
+        libraries.append(this_library)
 
-            libraries.append(this_library)
+        if this_library_path is not None:
+            # This library is not in one of the system path library, we need to add
+            # it to the -L flag during linking. Let's put it in the library_dirs list
+            # which will be used in the Extension class
 
-            if this_library_path is not None:
-                # This library is not in one of the system path library, we need to add
-                # it to the -L flag during linking. Let's put it in the library_dirs list
-                # which will be used in the Extension class
-
-                library_dirs.append(this_library_path)
+            library_dirs.append(this_library_path)
 
 
     # try to manually add on the include directory
 
     header_paths = []
-    
+
     if library_dirs:
 
         # grab it from the lib assuming that it is one up
@@ -329,43 +323,41 @@ def setup_xspec():
         header_paths.append(include_path)
 
     # let's be sure to add the conda include directory
-       
+
     if conda_prefix is not None:
-        
+
         conda_include_path = os.path.join(conda_prefix, 'include')
         header_paths.append(conda_include_path)
 
     # check if there are user set the location of the xspec headers:
-   
+
     xspec_headers_path = os.environ.get("XSPEC_INC_PATH")
-    
+
     if xspec_headers_path is not None:
 
-        print("You have set XSPEC_INC_PATH=%s" % xspec_headers_path)
+        print(f"You have set XSPEC_INC_PATH={xspec_headers_path}")
 
         header_paths.append(xspec_headers_path)
-    
+
     # Remove duplicates from library_dirs and header_paths
 
-    library_dirs = list(set(library_dirs))  
+    library_dirs = list(set(library_dirs))
     header_paths = list(set(header_paths))
 
-    # Configure the variables to build the external module with the C/C++ wrapper
-
-
-    ext_modules_configuration = [
-
-        Extension("astromodels.xspec._xspec",
-
-                  ["astromodels/xspec/src/_xspec.cc", ],
-                  include_dirs=header_paths,
-                  libraries=libraries,
-                  library_dirs=library_dirs,
-                  runtime_library_dirs=library_dirs,
-                  extra_compile_args=[], define_macros=macros),
+    return [
+        Extension(
+            "astromodels.xspec._xspec",
+            [
+                "astromodels/xspec/src/_xspec.cc",
+            ],
+            include_dirs=header_paths,
+            libraries=libraries,
+            library_dirs=library_dirs,
+            runtime_library_dirs=library_dirs,
+            extra_compile_args=[],
+            define_macros=macros,
+        ),
     ]
-
-    return ext_modules_configuration
 
 
 # Normal packages
@@ -393,7 +385,7 @@ setup(
 
     #cmdclass={'build_ext': My_build_ext},
     cmdclass=versioneer.get_cmdclass({'build_ext': My_build_ext}),
-    
+
     packages=packages,
 
     data_files=[('astromodels/data/functions', glob.glob('astromodels/data/functions/*.yaml')),
@@ -409,7 +401,7 @@ setup(
     download_url='https://github.com/threeml/astromodels/archive/v0.1',
 
     keywords=['Likelihood', 'Models', 'fit'],
-    
+
 
     ext_modules=ext_modules_configuration,
 

@@ -123,17 +123,17 @@ class Continuous_injection_diffusion_ellipse(Function3D, metaclass=FunctionMeta)
         # of a dimensionless quantity, so there must be a pivot there.
 
         e_energy_piv2 = 17. * \
-            np.power(old_div(energy, piv2), 0.54 + 0.046 *
+                np.power(old_div(energy, piv2), 0.54 + 0.046 *
                      np.log10(old_div(energy, piv2)))
         e_piv_piv2 = 17. * \
-            np.power(old_div(piv, piv2), 0.54 + 0.046 *
+                np.power(old_div(piv, piv2), 0.54 + 0.046 *
                      np.log10(old_div(piv, piv2)))
 
         try:
 
             rdiff_a = rdiff0 * np.power(old_div(e_energy_piv2, e_piv_piv2), old_div((delta - 1.), 2.)) * \
-                np.sqrt(b * b / 8. / np.pi * 0.624 + 0.26 * np.power(1. + 0.0107 * e_piv_piv2, -1.5)) / \
-                np.sqrt(b * b / 8. / np.pi * 0.624 + 0.26 *
+                    np.sqrt(b * b / 8. / np.pi * 0.624 + 0.26 * np.power(1. + 0.0107 * e_piv_piv2, -1.5)) / \
+                    np.sqrt(b * b / 8. / np.pi * 0.624 + 0.26 *
                         np.power(1. + 0.0107 * e_energy_piv2, -1.5))
 
         except ValueError:
@@ -163,10 +163,18 @@ class Continuous_injection_diffusion_ellipse(Function3D, metaclass=FunctionMeta)
         rdiffs = np.sqrt(rdiffs_a ** 2 * np.cos(thetas) **
                          2 + rdiffs_b ** 2 * np.sin(thetas) ** 2)
 
-        results = np.power(old_div(180.0, pi), 2) * 1.22 / (pi * np.sqrt(pi) * rdiffs_a * np.sqrt(
-            elongation) * (angseps + 0.06 * rdiffs)) * np.exp(old_div(-np.power(angseps, 2), rdiffs ** 2))
-
-        return results
+        return (
+            np.power(old_div(180.0, pi), 2)
+            * 1.22
+            / (
+                pi
+                * np.sqrt(pi)
+                * rdiffs_a
+                * np.sqrt(elongation)
+                * (angseps + 0.06 * rdiffs)
+            )
+            * np.exp(old_div(-np.power(angseps, 2), rdiffs**2))
+        )
 
     def get_boundaries(self):
 
@@ -715,9 +723,7 @@ class GalPropTemplate_3D(Function3D):
             assert np.all(np.isfinite(f)), "some interpolated values are wrong"
             self._interpmap = f
 
-        # (1000 is to change from MeV to KeV)
-        A = np.multiply(K, self._interpmap/1000.)
-        return A
+        return np.multiply(K, self._interpmap/1000.)
 
     def define_region(self, a, b, c, d, galactic=False):
         if galactic:

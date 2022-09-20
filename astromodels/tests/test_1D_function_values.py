@@ -15,7 +15,7 @@ def test_function_values_have_not_changed():
 
         eval_x = f["eval_values"][()]
 
-    
+
     for key in _known_functions:
 
         this_function = _known_functions[key]
@@ -47,29 +47,32 @@ def test_function_values_have_not_changed():
 
             continue
 
-        
+
         if this_function._n_dim == 1:
 
-            print("testing %s ..." % key)
+            print(f"testing {key} ...")
 
 
-            
-            
+                        
+
             func = this_function()
-            
+
             new_values = np.atleast_1d(func(eval_x))
 
             with h5py.File(_get_data_file_path("past_1D_values.h5"), "r") as f:
                 if key not in f.keys():
 
                     
-                    print("the function %s does not exist in the past data. You must run a script to add it" %key)
+                    print(
+                        f"the function {key} does not exist in the past data. You must run a script to add it"
+                    )
+
 
                 else:
-                
+
                     old_values = f[key][()]
 
-            
-            
+
+
                     npt.assert_almost_equal(new_values, old_values)
             

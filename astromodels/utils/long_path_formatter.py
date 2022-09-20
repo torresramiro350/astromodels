@@ -12,19 +12,13 @@ def long_path_formatter(line, max_width=pd.get_option('max_colwidth')):
     :return:
     """
 
-    if len(line) > max_width:
-
-        tokens = line.split(".")
-        trial1 = "%s...%s" % (tokens[0], tokens[-1])
-
-        if len(trial1) > max_width:
-
-            return "...%s" %(tokens[-1][-1:-(max_width-3)])
-
-        else:
-
-            return trial1
-
-    else:
-
+    if len(line) <= max_width:
         return line
+    tokens = line.split(".")
+    trial1 = f"{tokens[0]}...{tokens[-1]}"
+
+    return (
+        f"...{tokens[-1][-1:-(max_width - 3)]}"
+        if len(trial1) > max_width
+        else trial1
+    )

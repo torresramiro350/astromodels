@@ -25,9 +25,13 @@ def _process_html(dictionary):
 
             if len(value) > 1 or isinstance(list(value.values())[0], dict):
 
-                output.append(entry_start + str(key) + ': ')
-                output.append(_process_html(value))
-                output.append(entry_stop)
+                output.extend(
+                    (
+                        entry_start + str(key) + ': ',
+                        _process_html(value),
+                        entry_stop,
+                    )
+                )
 
             else:
 
@@ -39,9 +43,7 @@ def _process_html(dictionary):
 
     output.append(list_stop)
 
-    final_output = '\n'.join(output)
-
-    return final_output
+    return '\n'.join(output)
 
 
 def _process_text(dictionary):
@@ -50,11 +52,7 @@ def _process_text(dictionary):
 
     string_repr = yaml.dump(dictionary, default_flow_style=False)
 
-    # Add a '*' for each point in the list and indent appropriately
-
-    final_output = re.sub("(\s*)(.+)", "\\1  * \\2", string_repr)
-
-    return final_output
+    return re.sub("(\s*)(.+)", "\\1  * \\2", string_repr)
 
 
 def dict_to_list(dictionary, html=False):
@@ -66,10 +64,4 @@ def dict_to_list(dictionary, html=False):
     :return: the list
     """
 
-    if html:
-
-        return _process_html(dictionary)
-
-    else:
-
-        return _process_text(dictionary)
+    return _process_html(dictionary) if html else _process_text(dictionary)

@@ -772,7 +772,7 @@ def test_pickling_unpickling():
 
     # composite function
     po3 = Powerlaw()
-    
+
     composite2 = po3*li
 
     # Change some parameter
@@ -910,11 +910,11 @@ def test_spatial_template_2D():
 
     # Now load template files and test their evaluation
     shape1 = SpatialTemplate_2D(fits_file="test1.fits")
-    
+
     shape1.K = 1
 
     shape2 = SpatialTemplate_2D(fits_file="test2.fits")
-    
+
     shape2.K = 1
 
     assert shape1.hash != shape2.hash
@@ -937,8 +937,8 @@ def test_spatial_template_2D():
     shape2.K = 10
     assert np.all(shape1([312, 306], [41, 41], 0) == [1., 0.])
     assert np.all(shape2([312, 306], [41, 41], 0) == [0., 10.])
-    
-    
+
+
     os.remove("test1.fits")
     os.remove("test2.fits")
 
@@ -1028,9 +1028,9 @@ def test_abs_model():
         instance.info()
 
         instance.abundance_table_info
-        
+
         if i != 1:
-        
+
             instance.abundance_table = "AG89"
 
         if i ==0:

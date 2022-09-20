@@ -37,23 +37,23 @@ elif input == 1:
 else:
 
     already_known_functions = None
-    
+
 print(input, already_known_functions)       
-        
-    
+
+
 
 
 with h5py.File(file_path, flag) as f:
     if input == 1:
 
         f.create_dataset("eval_values", data=eval_x, compression="lzf")
-    
+
     for key in _known_functions:
 
         if key in already_known_functions:
 
             continue
-        
+
         this_function = _known_functions[key]
 
         # Test only the power law of XSpec, which is the only one we know we can test at 1 keV
@@ -71,22 +71,18 @@ with h5py.File(file_path, flag) as f:
 
             continue
 
-    #        if key.find("Synchrotron")==0:
-
-            # Naima Synchtron function should have its own test
-
     #            continue
 
         if this_function._n_dim == 1:
 
-            print("testing %s ..." % key)
+            print(f"testing {key} ...")
 
             func = this_function()
 
             data=func(eval_x)
-            
+
             print(data)
-            
+
             f.create_dataset(key, data=np.atleast_1d(data), compression="lzf")
 
 

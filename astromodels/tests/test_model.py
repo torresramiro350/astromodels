@@ -31,39 +31,29 @@ update_logging_level("DEBUG")
 
 def _get_point_source(name="test"):
 
-    pts = PointSource(name, ra=0, dec=0, spectral_shape=Powerlaw())
-
-    return pts
+    return PointSource(name, ra=0, dec=0, spectral_shape=Powerlaw())
 
 
 def _get_point_source_gal(name):
 
-    pts = PointSource(name, l=0, b=0, spectral_shape=Powerlaw())
-
-    return pts
+    return PointSource(name, l=0, b=0, spectral_shape=Powerlaw())
 
 
 def _get_point_source_composite(name):
 
     spectral_shape = Powerlaw() + Powerlaw()
 
-    pts = PointSource(name, l=0, b=0, spectral_shape=spectral_shape)
-
-    return pts
+    return PointSource(name, l=0, b=0, spectral_shape=spectral_shape)
 
 
 def _get_extended_source(name="test_ext"):
 
-    ext = ExtendedSource(name, Gaussian_on_sphere(), Powerlaw())
-
-    return ext
+    return ExtendedSource(name, Gaussian_on_sphere(), Powerlaw())
 
 
 def _get_particle_source(name="test_part"):
 
-    part = ParticleSource(name, Powerlaw())
-
-    return part
+    return ParticleSource(name, Powerlaw())
 
 
 class ModelGetter(object):
@@ -221,8 +211,7 @@ def test_constructor_with_mix():
     many_part_sources = [_get_particle_source(
         "part_source%i" % x) for x in range(200)]
 
-    all_sources = []
-    all_sources.extend(many_p_sources)
+    all_sources = list(many_p_sources)
     all_sources.extend(many_e_sources)
     all_sources.extend(many_part_sources)
 
@@ -280,7 +269,7 @@ def test_accessors_failures():
 
     for p in m:
 
-        assert not ((p.path + ".not") in m)
+        assert f"{p.path}.not" not in m
 
 
 def test_display():
@@ -329,14 +318,14 @@ def test_links():
     # Now test the link
 
     # This should print a warning, as trying to change the value of a linked parameters does not have any effect
-    
+
     old_value = m.one.spectrum.main.Powerlaw.K
-    
-    
+
+
     m.one.spectrum.main.Powerlaw.K = 1.23456
 
     assert old_value == m.one.spectrum.main.Powerlaw.K
-    
+
 
     # This instead should work
     new_value = 1.23456
@@ -439,7 +428,7 @@ def test_auto_unlink():
     m.link(m.one.spectrum.main.Powerlaw.K,
            m.two.spectrum.main.Powerlaw.K, link_law)
 
-    
+
 
     m.remove_source(m.two.name)
 
