@@ -1,16 +1,8 @@
-import os
-import sys
-from functools import lru_cache, wraps
+import gc
 
 import astropy.units as astropy_units
 import numpy as np
-import six
-from astropy.io import fits
-
 from astromodels.functions.function import Function1D, FunctionMeta
-from astromodels.utils import configuration
-from astromodels.utils import _get_data_file_path
-import gc
 
 try:
 
@@ -18,13 +10,13 @@ try:
 
     has_atomdb = True
 
-except:
+except ImportError:
 
     has_atomdb = False
 
 if has_atomdb:
     # APEC class
-    
+
     class APEC(Function1D, metaclass=FunctionMeta):
         r"""
         description :
@@ -54,11 +46,25 @@ if has_atomdb:
                 fix : yes
             redshift :
                 desc : Source redshift
-                initial value : 0.1
+                initial value : 0.0
                 min : 0.0
                 max : 10.0
                 delta : 1e-3
                 fix : yes
+
+        properties:
+         abundance_table:
+            desc: the abundance table for the model
+            initial value: AG89
+            allowed values:
+                - Allen
+                - AG89
+                - GA88
+                - Feldman
+                - GA10
+                - Lodd09
+                - AE8
+            function: _init_session
 
         """
 
@@ -71,22 +77,24 @@ if has_atomdb:
 
             self.K.unit = y_unit
 
-        def init_session(self, abund_table="AG89"):
+        def _init_session(self):
             # initialize PyAtomDB session
-            self.session = pyatomdb.spectrum.CIESession(abundset=abund_table)
+
+            self.session = pyatomdb.spectrum.CIESession(
+                abundset=self.abundance_table.value
+            )
 
         def clean(self):
             """
             Clean the current APEC session to avoid having too many open files
-            :returns: 
+            :returns:
             """
-            
+
             self.session = None
             del self.session
             gc.collect()
 
         def evaluate(self, x, K, kT, abund, redshift):
-            assert self.session is not None, "please run init_session(abund)"
 
             sess = self.session
 
@@ -94,7 +102,7 @@ if has_atomdb:
 
             xz = x * (1.0 + redshift)
 
-            ebplus = (np.roll(xz, -1) + xz)[: nval - 1] / 2.0
+            ebplus = (np.roll(xz, -1) + xz)[: np.max([nval - 1, 1])] / 2.0
 
             ebounds = np.empty(nval + 1)
 
@@ -143,7 +151,7 @@ if has_atomdb:
             return K * spec
 
     # VAPEC class
-    
+
     class VAPEC(Function1D, metaclass=FunctionMeta):
         r"""
         description :
@@ -256,6 +264,23 @@ if has_atomdb:
                 delta : 1e-3
                 fix : yes
 
+
+        properties:
+         abundance_table:
+            desc: the abundance table for the model
+            initial value: AG89
+            allowed values:
+                - Allen
+                - AG89
+                - GA88
+                - Feldman
+                - GA10
+                - Lodd09
+                - AE8
+            function: _init_session
+
+
+
         """
 
         def _set_units(self, x_unit, y_unit):
@@ -287,16 +312,18 @@ if has_atomdb:
 
             self.K.unit = y_unit
 
-        def init_session(self, abund_table="AG89"):
+        def _init_session(self):
             # initialize PyAtomDB session
-            self.session = pyatomdb.spectrum.CIESession(abundset=abund_table)
+            self.session = pyatomdb.spectrum.CIESession(
+                abundset=self.abundance_table.value
+            )
 
         def clean(self):
             """
             Clean the current APEC session to avoid having too many open files
-            :returns: 
+            :returns:
             """
-            
+
             self.session = None
             del self.session
             gc.collect()
@@ -304,7 +331,6 @@ if has_atomdb:
         def evaluate(
             self, x, K, kT, Fe, C, N, O, Ne, Mg, Al, Si, S, Ar, Ca, Ni, redshift
         ):
-            assert self.session is not None, "please run init_session(abund)"
 
             sess = self.session
 
@@ -312,7 +338,7 @@ if has_atomdb:
 
             xz = x * (1.0 + redshift)
 
-            ebplus = (np.roll(xz, -1) + xz)[: nval - 1] / 2.0
+            ebplus = (np.roll(xz, -1) + xz)[: np.max([nval - 1, 1])] / 2.0
 
             ebounds = np.empty(nval + 1)
 
@@ -327,51 +353,87 @@ if has_atomdb:
             sess.set_response(ebounds, raw=True)
 
             sess.set_abund(
-                [6, ], C,
+                [
+                    6,
+                ],
+                C,
             )
 
             sess.set_abund(
-                [7, ], N,
+                [
+                    7,
+                ],
+                N,
             )
 
             sess.set_abund(
-                [8, ], O,
+                [
+                    8,
+                ],
+                O,
             )
 
             sess.set_abund(
-                [10, ], Ne,
+                [
+                    10,
+                ],
+                Ne,
             )
 
             sess.set_abund(
-                [12, ], Mg,
+                [
+                    12,
+                ],
+                Mg,
             )
 
             sess.set_abund(
-                [13, ], Al,
+                [
+                    13,
+                ],
+                Al,
             )
 
             sess.set_abund(
-                [14, ], Si,
+                [
+                    14,
+                ],
+                Si,
             )
 
             sess.set_abund(
-                [16, ], S,
+                [
+                    16,
+                ],
+                S,
             )
 
             sess.set_abund(
-                [18, ], Ar,
+                [
+                    18,
+                ],
+                Ar,
             )
 
             sess.set_abund(
-                [20, ], Ca,
+                [
+                    20,
+                ],
+                Ca,
             )
 
             sess.set_abund(
-                [26, ], Fe,
+                [
+                    26,
+                ],
+                Fe,
             )
 
             sess.set_abund(
-                [28, ], Ni,
+                [
+                    28,
+                ],
+                Ni,
             )
 
             sess.set_abund(
@@ -381,5 +443,3 @@ if has_atomdb:
             spec = sess.return_spectrum(kT) / binsize / 1e-14
 
             return K * spec
-
-
