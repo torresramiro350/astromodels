@@ -140,7 +140,7 @@ class TemplateModelFactory(object):
         Pass the name of the parameter and the array of values that it will take in the grid
         """
 
-        if not parameter_name in self._parameters_grids:
+        if parameter_name not in self._parameters_grids:
 
             log.error(f"Parameter {parameter_name} is not part of this model")
 
@@ -227,7 +227,7 @@ class TemplateModelFactory(object):
 
         for i, (k, v) in enumerate(self._parameters_grids.items()):
 
-            if not k in parameters_values_input:
+            if k not in parameters_values_input:
 
                 log.error(f"Parameter {k} is not in input")
 
@@ -277,9 +277,7 @@ class TemplateModelFactory(object):
         # log space)
         if not np.all(np.isfinite(differential_fluxes)):
 
-            log.error(
-                "You have invalid values in the differential flux (nan or inf)"
-            )
+            log.error("You have invalid values in the differential flux (nan or inf)")
 
             raise AssertionError()
 
@@ -344,14 +342,17 @@ class TemplateModelFactory(object):
 
                     os.remove(filename_sanitized)
 
-                except:
+                except IOError:
 
                     log.error(
                         "The file %s already exists and cannot be removed (maybe you do not have "
                         "permissions to do so?). " % filename_sanitized
                     )
 
-                    raise IOError()
+                    raise IOError(
+                        f"The file {filename_sanitized} already exists and cannot be removed (maybe you do not have "
+                        "permissions to do so?). "
+                    )
 
             else:
 
@@ -360,7 +361,10 @@ class TemplateModelFactory(object):
                     "template models with the same name" % filename_sanitized
                 )
 
-                raise IOError()
+                raise IOError(
+                    f"The file {filename_sanitized} already exists! You cannot call two different "
+                    "template models with the same name"
+                )
 
         # Open the HDF5 file and write objects
 
@@ -510,7 +514,8 @@ class TemplateModel(with_metaclass(FunctionMeta, Function1D)):
     r"""
     description :
         A template model
-    latex : $n.a.$
+    latex :
+        $n.a.$
     parameters :
         K :
             desc : Normalization (freeze this to 1 if the template provides the normalization by itself)
@@ -942,9 +947,10 @@ class XSPECTableModel(object):
 
                     try:
 
-                        this_dict["values"] = spectra.data["PARAMVAL{%d}" % i]
+                        this_dict["values"] = spectra.data[f"PARAMVAL{i}"]
 
-                    except:
+                    except KeyError:
+
                         this_dict["values"] = spectra.data["PARAMVAL"][:, i]
 
                 else:

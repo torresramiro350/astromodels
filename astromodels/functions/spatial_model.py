@@ -1,30 +1,30 @@
-import collections
-import gc
-import hashlib
 import os
+import gc
 import pathlib
 import re
-from builtins import object, range, str
+import hashlib
+import h5py
+from typing import Dict, Any, List, Optional, Union
+import numpy as np
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
-
-import astropy.units as u
-import h5py
-import numpy as np
-import pandas as pd
 import scipy.interpolate
-from astropy.coordinates import ICRS, BaseCoordinateFrame, SkyCoord
-from astropy.io import fits
-from future.utils import with_metaclass
 from interpolation import interp
 from interpolation.splines import eval_linear
+import astropy.units as u
+import pandas as pd
+import collections
+
+from astropy.io import fits
 from pandas import HDFStore
-from scipy.interpolate import RegularGridInterpolator
+from builtins import object, range, str
+from future.utils import with_metaclass
 
 from astromodels.core.parameter import Parameter
+from astropy.coordinates import SkyCoord, ICRS, BaseCoordinateFrame
 from astromodels.functions.function import Function3D, FunctionMeta
-from astromodels.utils import get_user_data_path
+from scipy.interpolate import RegularGridInterpolator
+from astromodels.utils.configuration import get_user_data_path
 from astromodels.utils.angular_distance import angular_distance_fast
 from astromodels.utils.logging import setup_logger
 
@@ -44,40 +44,18 @@ __all__ = [
 
 
 class IncompleteGrid(RuntimeError):
-    """Raises if grid is incomplete
-
-    Args:
-        RuntimeError (None): Will raise if the grid contains any Nans or None
-        values.
-    """
-
     pass
 
 
 class ValuesNotInGrid(ValueError):
-    """Raises if any of the values isn't contained within the grid
-
-    Args:
-        ValueError (Exception): Will be present if parameters are not in
-        the defined grid.
-    """
-
     pass
 
 
 class MissingDataFile(RuntimeError):
-    """Check if the file exists
-
-    Args:
-        RuntimeError (Exception): Check if the file is present, if not raise
-        a RuntimeError.
-    """
-
     pass
 
 
-# This dictionary will keep track of the new classes already
-# created in the current session
+# This dictionary will keep track of the new classes already created in the current session
 _classes_cache = {}
 
 
@@ -100,8 +78,7 @@ class UnivariateSpline(object):
 
 
 # This class builds a dataframe from morphology parameters for a source
-# The information from the source comes from FITS files with
-# 3D template model maps
+# The information from the source comes from FITS files with 3D template model maps
 class ModelFactory(object):
     def __init__(
         self,
@@ -111,23 +88,17 @@ class ModelFactory(object):
         degree_of_interpolation=1,
         spline_smoothing_factor=0,
     ):
-        """Class builds a data table from 3d mapcube templates with information
-        on morphology and spectral parameters for different energy bins. These
-        parameters are used for interpolation in the class SpatialModel
 
-        Args:
-            name (str): Name of the outfile.
-            description (str): A brief summary of the table for reference.
-            names_of_parameters (np.ndarray): Provide a name for the
-            parameters.
-            degree_of_interpolation (int, optional): Degree of interpolation.
-            For 3D, interpolation can only be done linearly. Defaults to 1.
-            spline_smoothing_factor (int, optional): Smoothing factor in
-            in interpolation. Defaults to 0.
-
-        Raises:
-            RuntimeError: Name of the file cannot contain spaces or special
-            characters.
+        """
+        Class builds a data frame from 3D templates with morphology and
+        template parameters for multi-indices to be used for
+        interpolation in the class SpatialModel
+        :param: name: name to be used for the model (must be unique).
+        :param: description: brief description of model.
+        :param: names_of_parameters: names of the morphology parameters.
+        :param: degree_of_interpolation: interpolation degree for
+        interpolation over morphology parameters (default: 1).
+        :param: spline_smoothing_factor: smoothing across interpolation (  default: 1).
         """
 
         # Store the model name
@@ -160,22 +131,6 @@ class ModelFactory(object):
         self._map_multi_index = None
         self._interpolators = None
         self._fitsfile = None
-        self._E = None
-        self._L = None
-        self._B = None
-        self._delLat = None
-        self._delLon = None
-        self._delEn = None
-        self._parameters_grids = None
-        self._refLon = None
-        self._refLonPix = None
-        self._refLat = None
-        self._refLatPix = None
-        self._refEn = None
-        self._nl = None
-        self._nb = None
-        self._ne = None
-        self._map = None
 
     def define_parameter_grid(self, parameter_name: str, grid: np.ndarray):
         """
@@ -193,37 +148,28 @@ class ModelFactory(object):
         # if the grid is not numpy array, conver it to one
         grid_ = np.array(grid, dtype=float)
 
-        if grid_.shape[0] <= 1:
+        if not grid_.shape[0] > 1:
 
-            log.error(
-                "A grid for a parameter must containt at least two "
-                "elements for interpolation."
-            )
+            log.error("A grid for a parameter must containt at least two elements.")
 
             raise AssertionError()
 
         # Assert that all elements are unique
         if not np.all(np.unique(grid_) == grid_):
-            log.error(
-                f"Non-unique elements found in grid of parameter {parameter_name}."
-            )
+            log.error(f"Non-unique elements in grid of parameter {parameter_name}.")
 
         self._parameters_grids[parameter_name] = grid_
 
     def add_interpolation_data(
-        self, fitsfile: str, ihdu: int = 0, **parameters_values_input: dict
+        self, fitsfile: str, ihdu: int = 0, **parameters_values_input
     ):
-        """Fill data table with information from 3D mapcube templates.
-
-        Args:
-            fitsfile (str): FITS file with 3D mapcube.
-            ihdu (int, optional): Primary HDU identifier. Defaults to 0.
-
-        Raises:
-            IncompleteGrid: Check if grid contains any meaningful values.
-            RuntimeError: Check if a FITS file was specified.
-            AssertionError: Ensure the number of parameters is the same as
-            declared in the define_parameter_grid method.
+        """
+        Fill data frame with information from 3D templates.
+        :param: fitsfile: 3D template file with template information.
+        :ihdu: integer value of header (default: 0).
+        :param paramaters_values_input: dictionary containing names
+        and values of morphology parameters.
+        :return: (none).
         """
 
         # Verify that a grid has been defined for all parameters
@@ -232,8 +178,8 @@ class ModelFactory(object):
             if grid is None:
 
                 log.error(
-                    "You need to define a grid for all parameters, "
-                    "by using the define_parameter_grid method."
+                    "You need to define a grid for all parameters, by using the "
+                    "define_parameter_grid method."
                 )
 
                 raise IncompleteGrid()
@@ -256,8 +202,7 @@ class ModelFactory(object):
             self._delEn = 0.2  # f[ihdu].header["CDELT3"]
             self._refLon = f[ihdu].header["CRVAL1"]
             self._refLat = f[ihdu].header["CRVAL2"]
-            # f[ihdu].header["CRVAL3"] #Log(E/MeV) -> GeV to MeV
-            self._refEn = 5
+            self._refEn = 5  # f[ihdu].header["CRVAL3"] #Log(E/MeV) -> GeV to MeV
             self._refLonPix = f[ihdu].header["CRPIX1"]
             self._refLatPix = f[ihdu].header["CRPIX2"]
             # self._refEnPix = f[ihdu].header["CRPIX3"]
@@ -299,8 +244,6 @@ class ModelFactory(object):
 
         if self._data_frame is None:
 
-            # shape = []
-
             shape = [len(v) for k, v in self._parameters_grids.items()]
 
             shape.append(self._E.shape[0])
@@ -321,19 +264,16 @@ class ModelFactory(object):
 
         # Make sure we have all parameters and order the values in the same way as the dictionary
         parameter_idx = []
-        for i, (key, val) in enumerate(self._parameters_grids.items()):
+        for (k, v) in enumerate(self._parameters_grids.items()):
 
-            if key not in parameters_values_input:
+            if not k in parameters_values_input:
 
-                log.error(f"Parameter {key} is not in input")
+                log.error(f"Parameter {k} is not in input")
 
-            parameter_idx.append(
-                int(np.where(val == parameters_values_input[key])[0][0])
-            )
-
+            parameter_idx.append(int(np.where(v == parameters_values_input[k])[0][0]))
         log.debug(f"have index {parameter_idx}")
 
-        if len(parameter_idx) != len(self._parameters_grids):
+        if not len(parameter_idx) == len(self._parameters_grids):
 
             log.error("You didn't specify all parameters' values")
 
@@ -350,20 +290,6 @@ class ModelFactory(object):
                     self._data_frame[tuple(parameter_idx)][i][j][k] = tmp
 
     def save_data(self, overwrite=False):
-        """Save the table into a file for later usage with SpatialModel.
-
-        Args:
-            overwrite (bool, optional): Overwrite file it already exists.
-            Defaults to False.
-
-        Raises:
-            AssertionError: Raises if there are any non-numeric values within
-            table.
-            IOError: Raises if file exists, but cannot be deleted
-            for lack of write privileges.
-            IOError: Raises if file exists, and cannot be overwrriten
-            (overwrite is False).
-        """
 
         # First make sure that the whole data matrix has been filled
         if np.any(np.isnan(self._data_frame)):
@@ -392,7 +318,7 @@ class ModelFactory(object):
 
                     os.remove(filename_sanitized)
 
-                except IOError:
+                except:
 
                     log.error(
                         f"The file {filename_sanitized} already exists. "
@@ -440,11 +366,9 @@ def add_method(self, method, name=None):
 
 
 class RectBivariateSplineWrapper(object):
-    """Wrapper around RectBivariateSplien which supplies a __call__ method
-    which accepts the same syntax as other interpolation methods.py
-
-    Args:
-        object (RectBivariateSpline): Interpolation for 2D.
+    """
+    Wrapper around RectBivariateSpline, which supplies a __call__ method which accepts the same
+    syntax as the other interpolations methods.
     """
 
     def __init__(self, *args, **kwargs):
@@ -589,10 +513,8 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
     def _custom_init_(self, model_name, other_name=None):
         """
         Custom initialization for this model
-        :param model_name: the name of the model, corresponding to the
-        root of the .h5 file in the data directory
-        :param other_name: (optional) the name to be used as name of the model
-        when used in astromodels. If None
+        :param model_name: the name of the model, corresponding to the root of the .h5 file in the data directory
+        :param other_name: (optional) the name to be used as name of the model when used in astromodels. If None
         (default), use the same as model_name.
         :return: none
         """
@@ -625,9 +547,10 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
             try:
 
                 # sometimes this is stored binary
+
                 k = key.decode()
 
-            except AttributeError:
+            except (AttributeError):
 
                 # if not, load as a normal str
                 k = key
@@ -676,16 +599,13 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
 
         if other_name is None:
 
-            # super(SpatialModel, self).__init__(name, function_definition,
-            #  parameters)
-            super().__init__(name, function_definition, parameters)
+            super(SpatialModel, self).__init__(name, function_definition, parameters)
 
         else:
 
-            # super(SpatialModel, self).__init__(
-            # other_name, function_definition, parameters
-            # )
-            super().__init__(other_name, function_definition, parameters)
+            super(SpatialModel, self).__init__(
+                other_name, function_definition, parameters
+            )
 
         self._setup()
 
@@ -695,12 +615,11 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
 
         gc.collect()
 
-    def _prepare_interpolators(self, log_interp: bool, data_frame: np.ndarray):
+    def _prepare_interpolators(self, log_interp, data_frame):
         """
         :function reads column of flux values and performs interpolation over
         the parameters specified in ModelFactory
-        :param: log_interp: the normalization of flux is done in log scale
-        by default.
+        :param: log_interp: the normalization of flux is done in log scale by default
         :return: (none)
         """
 
@@ -752,15 +671,13 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
 
                         x, y = list(self._parameters_grids.values())
 
-                        # Make sure that the requested polynomial degree is
-                        # less thant the number of data sets in
+                        # Make sure that the requested polynomial degree is less thant the number of data sets in
                         # both directions
 
                         msg = (
-                            "You cannot use an interpolation degree of %s if "
-                            "you don't provide at least %s points "
-                            "in the %s direction. Increase the number of "
-                            "templates or decrease interpolation degree."
+                            "You cannot use an interpolation degree of %s if you don't provide at least %s points "
+                            "in the %s direction. Increase the number of templates or decrease interpolation "
+                            "degree."
                         )
 
                         if len(x) <= self._degree_of_interpolation:
@@ -810,37 +727,23 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
                                 ]
                             ),
                             this_data,
+                            # bounds_error=False,
+                            # fill_value=0.0
                         )
 
                     self._interpolators.append(this_interpolator)
 
-        del data_frame
+        # clear the data
+        # self._data_frame = None
+        del self.grid
         gc.collect()
 
-    def _interpolate(
-        self,
-        energies: np.ndarray,
-        lons: np.ndarray,
-        lats: np.ndarray,
-        parameter_values: np.ndarray,
-    ):
-        """Interpolates over the morphology parameters and creates the
-        interpolating function over energy, ra, and dec
-
-        Args:
-            energies (np.ndarray): Energy Bins
-            lons (np.ndarray): Longitude (RAs)
-            lats (np.ndarray): Latitude (Dec) values
-            parameter_values (np.ndarray): morphology parameters where to
-            evalute the interpolating function from _prepare_interpolators.
-
-        Raises:
-            AttributeError: Check if _prepare_interpolators has been run,
-            if it hasn't yet been run. Run it now.
-
-        Returns:
-            np.ndarray: Returns interpolated values over energies, longiutes,
-            and latitudes.
+    def _interpolate(self, energies, lons, lats, parameter_values):
+        """
+        interpolates over the morphology parameters and creates the interpolating
+        function for energy, ra, and dec
+        param: parameter_values: morphology parameters
+        return: (none)
         """
 
         # gather all interpolations for these parameters' values
@@ -880,7 +783,6 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
 
             raise AttributeError()
 
-        # f_interpolated = np.zeros([energies.size, lats.size])
         f_interpolated = np.zeros([lons.size, energies.size])
 
         # evaluate the interpolators over energy, ra, and dec
@@ -892,11 +794,9 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
 
             if self._is_log10:
 
-                # NOTE: if interpolation is carried using the log10 scale,
-                # ensure that values outside range of interpolation remain
-                # zero after conversion to linear scale.
-                # because if function returns zero, 10**(0) = 1.
-                # This affects the fit in 3ML and breaks things.
+                # NOTE: if interpolation is carried using the log10 scale, ensure that values outside
+                # range of interpolation remain zero after conversion to linear scale.
+                # because if function returns zero, 10**(0) = 1. This affects the fit in 3ML and breaks things.
 
                 log_interpolated_slice = interpolator(tuple([engs, lons, lats]))
 
@@ -931,7 +831,9 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
         del self._interpolators
         gc.collect()
 
-        log.info("You have cleaned the table model and it will no longer be usable.")
+        log.info(
+            "You have 'cleaned' the spatial table model and it will no longer be usable."
+        )
 
     def __del__(self):
 
@@ -942,9 +844,10 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
         self.lon0.unit = x_unit
         self.lat0.unit = y_unit
 
-        # self.K.unit = 1/(u.MeV * u.cm**2 * u.s * u.sr)
-        # keep this units to if templates have been normalized
-        self.K.unit = 1 / (u.sr)
+        # self.K.unit = (u.MeV * u.cm**2 * u.s * u.sr)**(-1)
+        self.K.unit = (u.sr) ** (
+            -1
+        )  # keep this units to if templates have been normalized
 
     def evaluate(self, x, y, z, K, lon0, lat0, *args):
 
@@ -963,6 +866,7 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
         # galprop likes MeV, 3ML likes keV
         log_energies = np.log10(energies) - np.log10((u.MeV.to("keV") / u.keV).value)
 
+        # A = np.multiply(K, self._interpolate(lons, lats, log_energies, args)/(10**convert_val))
         return np.multiply(
             K, self._interpolate(log_energies, lons, lats, args)
         )  # if templates are normalized no need to convert back
@@ -983,40 +887,24 @@ class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
 
         return self._data_file
 
-    def to_dict(self, minimal: bool = False):
+    def to_dict(self, minimal=False):
 
         data = super(Function3D, self).to_dict(minimal)
 
-        # if not minimal:
-        #
-        #     data["extra_setup"] = {
-        #         "_frame": self._frame,
-        #         "ramin": self.ramin,
-        #         "ramax": self.ramax,
-        #         "decmin": self.decmin,
-        #         "decmax": self.decmax,
-        #     }
+        if not minimal:
+
+            data["extra_setup"] = {
+                "_frame": self._frame,
+                "ramin": self.ramin,
+                "ramax": self.ramax,
+                "decmin": self.decmin,
+                "decmax": self.decmax,
+            }
 
         return data
 
     # Define the region within the template ROI
-    def define_region(
-        self, a: float, b: float, c: float, d: float, galactic: bool = False
-    ):
-        """Define the boundaries of template
-
-        Args:
-            a (float): Minimum longitude
-            b (float): Maximum longitude
-            c (float): Minimum latitude
-            d (float): Maximum latitude
-            galactic (bool, optional): Converts lon, lat to galactic coordinates.
-            Defaults to False.
-
-        Returns:
-            tuple(float, float, float, float): Returns a tuple of the
-            boundaries of RA and Dec or galactic coordinates if galactic=True.
-        """
+    def define_region(self, a, b, c, d, galactic=False):
 
         if galactic:
 
