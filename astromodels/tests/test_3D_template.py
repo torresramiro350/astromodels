@@ -111,9 +111,7 @@ def make_test_template(ra, dec, fitsfile):
 
     data = np.zeros([2, 201, 201])
     for i in range(2):
-        data[i][80:120][80:120] = 1
-
-    # print(data[0])
+        data[i][80:120, 80:120] = 1
 
     total = np.sum(data)
 
