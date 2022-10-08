@@ -15,6 +15,8 @@ import astropy.units as u
 import numba as nb
 import numpy as np
 import six
+from yaml.reader import ReaderError
+
 from astromodels.core.memoization import memoize
 from astromodels.core.my_yaml import my_yaml
 from astromodels.core.parameter import Parameter
@@ -24,7 +26,6 @@ from astromodels.core.tree import Node
 from astromodels.utils.logging import setup_logger
 from astromodels.utils.pretty_list import dict_to_list
 from astromodels.utils.table import dict_to_table
-from yaml.reader import ReaderError
 
 log = setup_logger(__name__)
 
@@ -248,8 +249,7 @@ class FunctionMeta(type):
 
                 if parameter_name in dct["_properties"]:
 
-                    log.error(
-                        "you must specify unique parameters and propert names")
+                    log.error("you must specify unique parameters and propert names")
 
                     raise DesignViolation()
 
@@ -960,8 +960,7 @@ class Function(Node):
 
         self._external_functions[internal_name] = function
 
-        log.debug(
-            f"{self.name} has now linked {function.name} as {internal_name}")
+        log.debug(f"{self.name} has now linked {function.name} as {internal_name}")
 
     def unlink_external_function(self, internal_name: str):
         """
@@ -1315,8 +1314,7 @@ class Function1D(Function):
         properties: Optional[Dict[str, FunctionProperty]] = None,
     ):
 
-        Function.__init__(self, name, function_definition,
-                          parameters, properties)
+        Function.__init__(self, name, function_definition, parameters, properties)
 
         self._x_unit = None
         self._y_unit = None
@@ -1565,8 +1563,7 @@ class Function2D(Function):
         properties: Optional[Dict[str, FunctionProperty]] = None,
     ):
 
-        Function.__init__(self, name, function_definition,
-                          parameters, properties)
+        Function.__init__(self, name, function_definition, parameters, properties)
 
         self._x_unit = None
         self._y_unit = None
@@ -2346,8 +2343,7 @@ def get_function(function_name, composite_function_expression=None):
         # Composite function
 
         # get the function
-        composite_function = _parse_function_expression(
-            composite_function_expression)
+        composite_function = _parse_function_expression(composite_function_expression)
 
         # it is possible that the functions have sub children
 
@@ -2410,13 +2406,16 @@ def get_function(function_name, composite_function_expression=None):
 
                 try:
 
-                    instance = astromodels.functions.spatial_model.SpatialModel(
-                        function_name)
+                    instance = astromodels.functions.spatial_model.HaloModel(
+                        function_name
+                    )
 
                 except astromodels.functions.spatial_model.MissingDataFile:
 
-                    log.error("Function %s is not known. Known functions are: %s" %
-                              (function_name, ",".join(list(_known_functions.keys()))))
+                    log.error(
+                        "Function %s is not known. Known functions are: %s"
+                        % (function_name, ",".join(list(_known_functions.keys())))
+                    )
 
                     raise UnknownFunction()
 
@@ -2588,18 +2587,19 @@ def _parse_function_expression(function_specification):
                 import astromodels.functions.spatial_model
 
                 try:
-                    instance = astromodels.functions.spatial_model.SpatialModel(
-                        unique_function)
+                    instance = astromodels.functions.spatial_model.HaloModel(
+                        unique_function
+                    )
 
                 except astromodels.functions.spatial_model.MissingDataFile as e:
 
                     # It's not a template
 
                     raise UnknownFunction(
-                    "Function %s in expression %s is unknown. If this is a template model, you are "
+                        "Function %s in expression %s is unknown. If this is a template model, you are "
                         "probably missing the data file"
-                    % (unique_function, function_specification)
-                ) from e
+                        % (unique_function, function_specification)
+                    ) from e
 
                 else:
                     instances[complete_function_specification] = instance

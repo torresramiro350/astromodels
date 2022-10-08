@@ -113,6 +113,8 @@ def make_test_template(ra, dec, fitsfile):
     for i in range(2):
         data[i][80:120][80:120] = 1
 
+    # print(data[0])
+
     total = np.sum(data)
 
     data /= total / dOmega
