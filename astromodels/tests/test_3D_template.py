@@ -152,6 +152,18 @@ def test_model_factory_1D():
 
     halo_model = HaloModel("__test3D_1D")
     halo_model.define_region(ra_min, ra_max, dec_min, dec_max, galactic=False)
+
+    extended_source = ExtendedSource("__test_source", spatial_shape=halo_model)
+
+    extended_source.lon0 = ra * u.degree
+    extended_source.lat0 = dec * u.degree
+
+    assert extended_source.spatial_shape.lon0.value == ra
+    assert extended_source.spatial_shape.lat0.value == dec
+
+    assert extended_source.spatial_shape.lon0.free
+    assert extended_source.spatial_shape.lat0.free
+
     halo_model.clean()
 
 
@@ -191,4 +203,16 @@ def test_model_factory_2D():
 
     halo_model = HaloModel("__test3D_2D")
     halo_model.define_region(ra_min, ra_max, dec_min, dec_max, galactic=False)
+
+    extended_source = ExtendedSource("__test_source", spatial_shape=halo_model)
+
+    extended_source.lon0 = ra * u.degree
+    extended_source.lat0 = dec * u.degree
+
+    assert extended_source.spatial_shape.lon0.value == ra
+    assert extended_source.spatial_shape.lat0.value == dec
+
+    assert extended_source.spatial_shape.lon0.free
+    assert extended_source.spatial_shape.lat0.free
+
     halo_model.clean()
