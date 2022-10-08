@@ -131,7 +131,7 @@ def test_model_factory_1D():
     dec_min = dec - 4.0
     dec_max = dec + 4.0
 
-    make_test_template(ra, dec, "__test3D_simplefits")
+    make_test_template(ra, dec, "__test3D_simple.fits")
 
     diff = np.arange(25.0, 25.4, 0.2)
 
@@ -145,7 +145,7 @@ def test_model_factory_1D():
 
     halo_model_factory.define_parameter_grid("diff", diff)
 
-    for i, dval in enumerate(diff):
+    for dval in diff:
         halo_model_factory.add_interpolation_data("__test3D_simple.fits", diff=dval)
 
     halo_model_factory.save_data(overwrite=True)
@@ -181,8 +181,8 @@ def test_model_factory_2D():
     halo_model_factory.define_parameter_grid("diff", diff)
     halo_model_factory.define_parameter_grid("index", index)
 
-    for i, dval in enumerate(diff):
-        for j, idx in enumerate(index):
+    for dval in diff:
+        for idx in index:
             halo_model_factory.add_interpolation_data(
                 "__test3D_simple.fits", diff=dval, index=idx
             )

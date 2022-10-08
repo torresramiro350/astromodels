@@ -303,11 +303,11 @@ class ModelFactory(object):
 
             shape = [len(v) for k, v in self._parameters_grids.items()]
 
-            # shape.append(self._E.shape[0])
-            # shape.append(self._L.shape[0])
-            # shape.append(self._B.shape[0])
+            shape.append(self._E.shape[0])
+            shape.append(self._L.shape[0])
+            shape.append(self._B.shape[0])
 
-            shape.extend((self._E.shape[0], self._L.shape[0], self._B.shape[0]))
+            # shape.extend([self._E.shape[0], self._L.shape[0], self._B.shape[0]])
 
             log.debug(f"grid shape: {shape}")
 
