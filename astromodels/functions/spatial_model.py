@@ -253,14 +253,13 @@ class ModelFactory(object):
 
             self._delLon = f[ihdu].header["CDELT1"]
             self._delLat = f[ihdu].header["CDELT2"]
-            self._delEn = 0.2  # f[ihdu].header["CDELT3"]
+            self._delEn = f[ihdu].header["CDELT3"]
             self._refLon = f[ihdu].header["CRVAL1"]
             self._refLat = f[ihdu].header["CRVAL2"]
-            # f[ihdu].header["CRVAL3"] #Log(E/MeV) -> GeV to MeV
-            self._refEn = 5
+            self._refEn = f[ihdu].header["CRVAL3"]  # Log(E/MeV) -> GeV to MeV
             self._refLonPix = f[ihdu].header["CRPIX1"]
             self._refLatPix = f[ihdu].header["CRPIX2"]
-            # self._refEnPix = f[ihdu].header["CRPIX3"]
+            self._refEnPix = f[ihdu].header["CRPIX3"]
 
             self._map = f[ihdu].data  # 3D array containing the flux values
 
@@ -307,8 +306,6 @@ class ModelFactory(object):
             shape.append(self._L.shape[0])
             shape.append(self._B.shape[0])
 
-            # shape.extend([self._E.shape[0], self._L.shape[0], self._B.shape[0]])
-
             log.debug(f"grid shape: {shape}")
 
             self._data_frame = np.zeros(tuple(shape))
@@ -341,13 +338,12 @@ class ModelFactory(object):
 
             raise AssertionError()
 
+        # filling the data map
         for i, e in enumerate(self._E):
             for j, l in enumerate(self._L):
                 for k, b in enumerate(self._B):
 
-                    tmp = pd.to_numeric(
-                        self._map[i][j][k]
-                    )  # filling with map information
+                    tmp = pd.to_numeric(self._map[i][j][k])
 
                     self._data_frame[tuple(parameter_idx)][i][j][k] = tmp
 
