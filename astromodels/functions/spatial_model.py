@@ -39,7 +39,7 @@ __all__ = [
     "ValuesNotInGrid",
     "MissingDataFile",
     "ModelFactory",
-    "SpatialModel",
+    "HaloModel",
 ]
 
 
@@ -131,26 +131,26 @@ class ModelFactory(object):
         """
 
         self._data_frame = None
-        self._parameters_multi_index = None
-        self._map_multi_index = None
-        self._interpolators = None
-        self._fitsfile = None
-        self._E = None
-        self._L = None
-        self._B = None
-        self._delLat = None
-        self._delLon = None
-        self._delEn = None
-        self._parameters_grids = None
-        self._refLon = None
-        self._refLonPix = None
-        self._refLat = None
-        self._refLatPix = None
-        self._refEn = None
-        self._nl = None
-        self._nb = None
-        self._ne = None
-        self._map = None
+        # self._parameters_multi_index = None
+        # self._map_multi_index = None
+        # self._interpolators = None
+        # self._fitsfile = None
+        # self._E = None
+        # self._L = None
+        # self._B = None
+        # self._delLat = None
+        # self._delLon = None
+        # self._delEn = None
+        # self._parameters_grids = None
+        # self._refLon = None
+        # self._refLonPix = None
+        # self._refLat = None
+        # self._refLatPix = None
+        # self._refEn = None
+        # self._nl = None
+        # self._nb = None
+        # self._ne = None
+        # self._map = None
 
         # Store the model name
         # Ensure that it contains no spaces nor special characters
@@ -204,14 +204,12 @@ class ModelFactory(object):
 
         # Assert that all elements are unique
         if not np.all(np.unique(grid_) == grid_):
-            log.error(
-                f"Non-unique elements found in grid of parameter {parameter_name}."
-            )
+            log.error(f"Non-unique elements found in grid of parameter {parameter_name}.")
 
         self._parameters_grids[parameter_name] = grid_
 
     def add_interpolation_data(
-        self, fitsfile: str, ihdu: int = 0, **parameters_values_input: dict
+        self, fitsfile: Path, ihdu: int = 0, **parameters_values_input: dict
     ):
         """Fill data table with information from 3D mapcube templates.
 
@@ -326,9 +324,7 @@ class ModelFactory(object):
 
                 log.error(f"Parameter {key} is not in input")
 
-            parameter_idx.append(
-                int(np.where(val == parameters_values_input[key])[0][0])
-            )
+            parameter_idx.append(int(np.where(val == parameters_values_input[key])[0][0]))
 
         log.debug(f"have index {parameter_idx}")
 
@@ -720,9 +716,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         log.info("Preparing the interpolators...")
 
         # Figure out the shape of the data matrices
-        para_shape = np.array(
-            [x.shape[0] for x in list(self._parameters_grids.values())]
-        )
+        para_shape = np.array([x.shape[0] for x in list(self._parameters_grids.values())])
 
         # interpolate over the parameters
         self._interpolators = []
