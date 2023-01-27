@@ -930,7 +930,8 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
     def _setup(self):
 
-        self._frame = "ICRS"  # ICRS()
+        # self._frame = "ICRS"  # ICRS()
+        self._frame: ICRS = ICRS()
 
     def clean(self):
         """
