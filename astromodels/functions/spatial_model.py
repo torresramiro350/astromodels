@@ -1030,21 +1030,21 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         return self._data_file
 
-    def to_dict(self, minimal: bool = False):
+    # def to_dict(self, minimal: bool = False):
+    #
+    #     data = super(Function3D, self).to_dict(minimal)
+    #
+    #     # if not minimal:
+    #     #
+    #     #     data["extra_setup"] = {
+    #     #         "_frame": self._frame,
+    #     #         "ramin": self.ramin,
+    #     #         "ramax": self.ramax,
+    #     #         "decmin": self.decmin,
+    #     #         "decmax": self.decmax,
+    #     #     }
 
-        data = super(Function3D, self).to_dict(minimal)
-
-        # if not minimal:
-        #
-        #     data["extra_setup"] = {
-        #         "_frame": self._frame,
-        #         "ramin": self.ramin,
-        #         "ramax": self.ramax,
-        #         "decmin": self.decmin,
-        #         "decmax": self.decmax,
-        #     }
-
-        return data
+    #     return data
 
     # Define the region within the template ROI
     def define_region(
