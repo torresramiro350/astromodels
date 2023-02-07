@@ -569,6 +569,18 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
             - fk5
             - fk4
             - fk4_no_e
+        ramin:
+            desc: minimum boundary for template
+            initial value: 0
+        ramax:
+            desc: maximum boundary for template
+            initial value: 0
+        decmin:
+            desc: minimum dec boundary for template
+            initial value: 0
+        decmax:
+            desc: maximum dec boundary for template
+            initial value: 0
     """
 
     def _custom_init_(self, model_name, other_name=None):
