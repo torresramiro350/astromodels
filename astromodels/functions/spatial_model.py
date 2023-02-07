@@ -962,10 +962,10 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         self._frame = "icrs"  # ICRS()
         # self._frame: ICRS = ICRS()
-        self._ramin = self.ramin.value
-        self._ramax = self.ramax.value
-        self._decmin = self.decmin.value
-        self._decmax = self.decmax.value
+        # self._ramin = self.ramin.value
+        # self._ramax = self.ramax.value
+        # self._decmin = self.decmin.value
+        # self._decmax = self.decmax.value
 
     def clean(self):
         """
@@ -1076,25 +1076,25 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
                 l=[lmin, lmin, lmax, lmax], b=[bmin, bmax, bmax, bmin], frame="galactic"
             )
 
-            self.ramin: float = min(_coord.transform_to("icrs").ra.value)
-            self.ramax: float = max(_coord.transform_to("icrs").ra.value)
-            self.decmin: float = min(_coord.transform_to("icrs").dec.value)
-            self.decmax: float = max(_coord.transform_to("icrs").dec.value)
+            self.ramin.value = min(_coord.transform_to("icrs").ra.value)
+            self.ramax.value = max(_coord.transform_to("icrs").ra.value)
+            self.decmin.value = min(_coord.transform_to("icrs").dec.value)
+            self.decmax.value = max(_coord.transform_to("icrs").dec.value)
 
         else:
 
-            self._ramin = a
-            self._ramax = b
-            self._decmin = c
-            self._decmax = d
+            self.ramin.value = a
+            self.ramax.value = b
+            self.decmin.value = c
+            self.decmax.value = d
 
-        return self._ramin, self._ramax, self._decmin, self._decmax
+        return self.ramin, self.ramax, self.decmin, self.decmax
 
     def get_boundaries(self):
 
-        min_longitude: float = self._ramin
-        max_longitude: float = self._ramax
-        min_latitude: float = self._decmin
-        max_latitude: float = self._decmax
+        min_longitude: float = self.ramin.value
+        max_longitude: float = self.ramax.value
+        min_latitude: float = self.decmin.value
+        max_latitude: float = self.decmax.value
 
         return (min_longitude, max_longitude), (min_latitude, max_latitude)
