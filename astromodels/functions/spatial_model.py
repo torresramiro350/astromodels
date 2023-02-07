@@ -559,31 +559,13 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
             initial value: 0.0
             min: -90.0
             max: 90.0
-    properties:
-        frame:
-            desc: coordinate frame
-            initial value: icrs
-            allowed_values:
-            - icrs
-            - galactic
-            - fk5
-            - fk4
-            - fk4_no_e
-        ramin:
-            desc: minimum boundary for template
-            initial value: 0
-        ramax:
-            desc: maximum boundary for template
-            initial value: 0
-        decmin:
-            desc: minimum dec boundary for template
-            initial value: 0
-        decmax:
-            desc: maximum dec boundary for template
-            initial value: 0
     """
 
-    def _custom_init_(self, model_name, other_name=None):
+    def _custom_init_(
+        self,
+        model_name,
+        other_name=None,
+    ):
         """
         Custom initialization for this model
         :param model_name: the name of the model, corresponding to the
@@ -673,15 +655,10 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         if other_name is None:
 
-            # super(SpatialModel, self).__init__(name, function_definition,
-            #  parameters)
             super().__init__(name, function_definition, parameters)
 
         else:
 
-            # super(SpatialModel, self).__init__(
-            # other_name, function_definition, parameters
-            # )
             super().__init__(other_name, function_definition, parameters)
 
         self._setup()
@@ -996,6 +973,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
     #     return data
 
     # Define the region within the template ROI
+    # TODO: set as pending to implement in the add_interpolation method later
     def define_region(
         self, a: float, b: float, c: float, d: float, galactic: bool = False
     ):
@@ -1041,9 +1019,17 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
     def get_boundaries(self):
 
-        min_longitude: float = self.ramin
-        max_longitude: float = self.ramax
-        min_latitude: float = self.decmin
-        max_latitude: float = self.decmax
+        # TODO: will investigate if the current method works and remove
+        # TODO: this later.
+        # min_longitude: float = self.ramin
+        # max_longitude: float = self.ramax
+        # min_latitude: float = self.decmin
+        # max_latitude: float = self.decmax
+        # use the boundaries from the template to define the boundaries
+        min_longitude = min(self._L)
+        max_longitude = max(self._L)
+        min_latitude = min(self._B)
+        max_latitude = max(self._B)
+        # print(min_longitude, max_longitude, min_latitude, max_latitude)
 
         return (min_longitude, max_longitude), (min_latitude, max_latitude)
