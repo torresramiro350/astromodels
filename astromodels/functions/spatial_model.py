@@ -579,8 +579,38 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
             initial value: 0.0
             min: -90.0
             max: 90.0
+    properties:
+        frame:
+            desc: coordinate frame
+            initial value: icrs
+            allowed_values:
+            - icrs
+            - galactic
+            - fk5
+            - fk4
+            - fk4_no_e
+
+        ramin:
+            desc: minimum ra boundary of template
+            intial value: 0.
+        ramax:
+            desc: maximum ra boundary of template
+            intial value: 0.
+        decmin:
+            desc: minimum dec boundary of template
+            intial value: 0.
+        decmax:
+            desc: maximum dec boundary of template
+            intial value: 0.
     """
 
+    # data["extra_setup"] = {
+    # "_frame": self._frame,
+    # "ramin": self.ramin,
+    # "ramax": self.ramax,
+    # "decmin": self.decmin,
+    # "decmax": self.decmax,
+    # }
     def _custom_init_(self, model_name, other_name=None):
         """
         Custom initialization for this model
@@ -930,8 +960,12 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
     def _setup(self):
 
-        # self._frame = "ICRS"  # ICRS()
-        self._frame: ICRS = ICRS()
+        self._frame = "icrs"  # ICRS()
+        # self._frame: ICRS = ICRS()
+        self._ramin = self.ramin.value
+        self._ramax = self.ramax.value
+        self._decmin = self.decmin.value
+        self._decmax = self.decmax.value
 
     def clean(self):
         """
@@ -980,16 +1014,16 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
             K, self._interpolate(log_energies, lons, lats, args)
         )  # if templates are normalized no need to convert back
 
-    def set_frame(self, new_frame):
-        """
-        Set a new frame for the coordinates (the default is ICRS J2000)
-        :param new_frame: a coordinate frame from astropy
-        :return: (none)
-        """
-
-        assert isinstance(new_frame, BaseCoordinateFrame)
-
-        self._frame = new_frame
+    # def set_frame(self, new_frame):
+    # """
+    # Set a new frame for the coordinates (the default is ICRS J2000)
+    # :param new_frame: a coordinate frame from astropy
+    # :return: (none)
+    # """
+    #
+    # assert isinstance(new_frame, BaseCoordinateFrame)
+    #
+    # self._frame = new_frame
 
     @property
     def data_file(self):
@@ -1000,15 +1034,15 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         data = super(Function3D, self).to_dict(minimal)
 
-        if not minimal:
-
-            data["extra_setup"] = {
-                "_frame": self._frame,
-                "ramin": self.ramin,
-                "ramax": self.ramax,
-                "decmin": self.decmin,
-                "decmax": self.decmax,
-            }
+        # if not minimal:
+        #
+        #     data["extra_setup"] = {
+        #         "_frame": self._frame,
+        #         "ramin": self.ramin,
+        #         "ramax": self.ramax,
+        #         "decmin": self.decmin,
+        #         "decmax": self.decmax,
+        #     }
 
         return data
 
@@ -1049,18 +1083,18 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         else:
 
-            self.ramin = a
-            self.ramax = b
-            self.decmin = c
-            self.decmax = d
+            self._ramin = a
+            self._ramax = b
+            self._decmin = c
+            self._decmax = d
 
-        return self.ramin, self.ramax, self.decmin, self.decmax
+        return self._ramin, self._ramax, self._decmin, self._decmax
 
     def get_boundaries(self):
 
-        min_longitude: float = self.ramin
-        max_longitude: float = self.ramax
-        min_latitude: float = self.decmin
-        max_latitude: float = self.decmax
+        min_longitude: float = self._ramin
+        max_longitude: float = self._ramax
+        min_latitude: float = self._decmin
+        max_latitude: float = self._decmax
 
         return (min_longitude, max_longitude), (min_latitude, max_latitude)
