@@ -131,26 +131,6 @@ class ModelFactory(object):
         """
 
         self._data_frame = None
-        # self._parameters_multi_index = None
-        # self._map_multi_index = None
-        # self._interpolators = None
-        # self._fitsfile = None
-        # self._E = None
-        # self._L = None
-        # self._B = None
-        # self._delLat = None
-        # self._delLon = None
-        # self._delEn = None
-        # self._parameters_grids = None
-        # self._refLon = None
-        # self._refLonPix = None
-        # self._refLat = None
-        # self._refLatPix = None
-        # self._refEn = None
-        # self._nl = None
-        # self._nb = None
-        # self._ne = None
-        # self._map = None
 
         # Store the model name
         # Ensure that it contains no spaces nor special characters
@@ -783,29 +763,13 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
                         if len(x) <= self._degree_of_interpolation:
 
-                            log.error(
-                                # msg
-                                # % (
-                                # self._degree_of_interpolation,
-                                # self._degree_of_interpolation + 1,
-                                # "x",
-                                # )
-                                msg(self._degree_of_interpolation, "x")
-                            )
+                            log.error(msg(self._degree_of_interpolation, "x"))
 
                             raise RuntimeError()
 
                         if len(y) <= self._degree_of_interpolation:
 
-                            log.error(
-                                msg(self._degree_of_interpolation, "y")
-                                # msg
-                                # % (
-                                # self._degree_of_interpolation,
-                                # self._degree_of_interpolation + 1,
-                                # "y",
-                                # )
-                            )
+                            log.error(msg(self._degree_of_interpolation, "y"))
 
                             raise RuntimeError()
 
@@ -821,7 +785,6 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
                     else:
 
                         # In more than 2d, we can only interpolate linearly
-                        # this_interpolator = RegularGridInterpolator(
                         this_interpolator = GridInterpolate(
                             tuple(
                                 [
@@ -918,7 +881,6 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
                 # because if function returns zero, 10**(0) = 1.
                 # This affects the fit in 3ML and breaks things.
 
-                # log_interpolated_slice = interpolator(tuple([engs, lons, lats]))
                 log_interpolated_slice = interpolator((engs, lons, lats))
 
                 interpolated_slice = np.array(
@@ -941,11 +903,6 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
     def _setup(self):
 
         self._frame = "icrs"  # ICRS()
-        # self._frame: ICRS = ICRS()
-        # self._ramin = self.ramin.value
-        # self._ramax = self.ramax.value
-        # self._decmin = self.decmin.value
-        # self._decmax = self.decmax.value
 
     def clean(self):
         """
