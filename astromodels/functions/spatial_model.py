@@ -592,16 +592,16 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         ramin:
             desc: minimum ra boundary of template
-            intial value: 0.
+            initial value: 0.
         ramax:
             desc: maximum ra boundary of template
-            intial value: 0.
+            initial value: 0.
         decmin:
             desc: minimum dec boundary of template
-            intial value: 0.
+            initial value: 0.
         decmax:
             desc: maximum dec boundary of template
-            intial value: 0.
+            initial value: 0.
     """
 
     # data["extra_setup"] = {
