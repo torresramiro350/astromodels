@@ -10,6 +10,7 @@ narrow_energy_funcs = ["PhAbs", "TbAbs", "WAbs"]
 models_to_exclude = [
     "_ComplexTestFunction",
     "TemplateModel",
+    "HaloModel",
     "SpatialTemplate_2D",
 ]
 
@@ -69,9 +70,7 @@ for k, v in _known_functions.items():
 
             # inject the func name into the markdown
 
-            this_md_str = base_1d_md_str.replace(
-                "func_title", k.replace("_", " ")
-            )
+            this_md_str = base_1d_md_str.replace("func_title", k.replace("_", " "))
 
             # create
 
@@ -119,9 +118,7 @@ for k, v in _known_functions.items():
 
             # inject the func name into the markdown
 
-            this_md_str = base_prior_md_str.replace(
-                "func_title", k.replace("_", " ")
-            )
+            this_md_str = base_prior_md_str.replace("func_title", k.replace("_", " "))
 
             # create
 
