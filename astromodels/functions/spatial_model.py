@@ -37,7 +37,7 @@ log = setup_logger(__name__)
 __all__ = [
     "IncompleteGrid",
     "ValuesNotInGrid",
-    "MissingDataFile",
+    "MissingSpatialDataFile",
     "ModelFactory",
     "HaloModel",
 ]
@@ -65,7 +65,7 @@ class ValuesNotInGrid(ValueError):
     pass
 
 
-class MissingDataFile(RuntimeError):
+class MissingSpatialDataFile(RuntimeError):
     """Check if the file exists
 
     Args:
@@ -589,7 +589,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
                 " Did you use the ModelFactory?"
             )
 
-            raise MissingDataFile
+            raise MissingSpatialDataFile
 
         # Open the template definition and read from it
         self._data_file = filename_sanitized
