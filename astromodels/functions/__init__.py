@@ -84,6 +84,7 @@ from .priors import (
     Truncated_gaussian,
     Uniform_prior,
 )
+from .spatial_model import HaloModel, ModelFactory
 from .template_model import (
     MissingDataFile,
     TemplateModel,
@@ -140,6 +141,8 @@ __all__ = [
     "TemplateModelFactory",
     "XSPECTableModel",
     "MissingDataFile",
+    "HaloModel",
+    "ModelFactory",
     "Log_parabola",
     "Blackbody",
     "Function1D",

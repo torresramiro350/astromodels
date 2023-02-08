@@ -148,9 +148,7 @@ class FunctionMeta(type):
 
         try:
 
-            function_definition = my_yaml.load(
-                dct["__doc__"], Loader=my_yaml.FullLoader
-            )
+            function_definition = my_yaml.load(dct["__doc__"], Loader=my_yaml.FullLoader)
 
         except ReaderError:  # pragma: no cover
 
@@ -952,9 +950,7 @@ class Function(Node):
 
         if internal_name in self._external_functions:
 
-            log.error(
-                f"a function with internal name {internal_name} is already linked!"
-            )
+            log.error(f"a function with internal name {internal_name} is already linked!")
 
             raise RuntimeError()
 
@@ -1158,8 +1154,7 @@ class Function(Node):
                     # However, if also the other function has fixed dimension and it is dimensionless
                     # (likely another XSpec multiplicative model) we need to flag that as well
                     if other_instance.has_fixed_units() and (
-                        u.Unit(other_instance.fixed_units[1])
-                        == u.dimensionless_unscaled
+                        u.Unit(other_instance.fixed_units[1]) == u.dimensionless_unscaled
                     ):
                         other_instance._make_dimensionless = True
 
@@ -1590,9 +1585,7 @@ class Function2D(Function):
 
         except ValueError:
 
-            msg = (
-                "Could not get a Unit instance from provided units when setting units "
-            )
+            msg = "Could not get a Unit instance from provided units when setting units "
             msg += f"\nfor function {self.name}"
 
             log.error(msg)
@@ -1752,9 +1745,7 @@ class Function3D(Function):
 
         except ValueError:
 
-            msg = (
-                "Could not get a Unit instance from provided units when setting units "
-            )
+            msg = "Could not get a Unit instance from provided units when setting units "
             msg += f"\nfor function {self.name}"
 
             log.error(msg)
@@ -2161,9 +2152,7 @@ class CompositeFunction(Function):
             "latex": NO_LATEX_FORMULA,
         }
 
-        Function.__init__(
-            self, "composite", _function_definition, parameters, properties
-        )
+        Function.__init__(self, "composite", _function_definition, parameters, properties)
 
         self._uuid = self._uuid_expression
 

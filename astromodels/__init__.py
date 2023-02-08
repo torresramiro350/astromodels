@@ -11,7 +11,6 @@ from ._version import get_versions
 
 if os.environ.get("ASTROMODELS_DEBUG", None) is None:
 
-    from .utils.configuration import astromodels_config
     from .core.memoization import use_astromodels_memoization
     from .core.model import Model
     from .core.model_parser import clone_model, load_model
@@ -54,6 +53,7 @@ if os.environ.get("ASTROMODELS_DEBUG", None) is None:
         GalPropTemplate_3D,
         Gaussian,
         Gaussian_on_sphere,
+        HaloModel,
         Inverse_cutoff_powerlaw,
         Latitude_galactic_diffuse,
         Line,
@@ -62,6 +62,7 @@ if os.environ.get("ASTROMODELS_DEBUG", None) is None:
         Log_uniform_prior,
         MissingDataFile,
         ModelAssertionViolation,
+        ModelFactory,
         ModifiedBlackbody,
         NonDissipativePhotosphere,
         NonDissipativePhotosphere_Deep,
@@ -88,11 +89,12 @@ if os.environ.get("ASTROMODELS_DEBUG", None) is None:
         XSPECTableModel,
         ZDust,
         get_polynomial,
+        has_atomdb,
         has_ebltable,
         has_gsl,
         has_naima,
-        has_atomdb,
     )
+    from .utils.configuration import astromodels_config
 
     if has_ebltable:
 
