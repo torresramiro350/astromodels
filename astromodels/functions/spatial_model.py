@@ -28,11 +28,12 @@ from astromodels.utils import get_user_data_path
 from astromodels.utils.angular_distance import angular_distance_fast
 from astromodels.utils.logging import setup_logger
 
+log = setup_logger(__name__)
+
 __author__ = "Ramiro"
 
 # NOTE: Script adapted GalProp and TemplateModelFactory in Astromodels.
 
-log = setup_logger(__name__)
 
 __all__ = [
     "IncompleteGrid",
@@ -621,7 +622,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         self._L = template_file.lons
 
         # get the dataframe
-        self.grid = template_file.grid
+        # self.grid = template_file.grid
 
         # Now get the metadata
         description = template_file.description
@@ -663,6 +664,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         self._setup()
 
+        self._prepare_interpolators(log_interp=False, data_frame=template_file.grid)
         # clean things up a bit
 
         del template_file
@@ -816,25 +818,32 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         """
 
         # gather all interpolations for these parameters' values
-        try:
+        interpolated_map = np.array(
+            [
+                self._interpolators[j](np.atleast_1d(parameter_values))
+                for j in range(len(self._interpolators))
+            ]
+        )
 
-            interpolated_map = np.array(
-                [
-                    self._interpolators[j](np.atleast_1d(parameter_values))
-                    for j in range(len(self._interpolators))
-                ]
-            )
+        # try:
+        #
+        #     interpolated_map = np.array(
+        #         [
+        #             self._interpolators[j](np.atleast_1d(parameter_values))
+        #             for j in range(len(self._interpolators))
+        #         ]
+        #     )
 
-        except AttributeError:
+        # except AttributeError:
 
-            self._prepare_interpolators(log_interp=False, data_frame=self.grid)
+        #     self._prepare_interpolators(log_interp=False, data_frame=self.grid)
 
-            interpolated_map = np.array(
-                [
-                    self._interpolators[j](np.atleast_1d(parameter_values))
-                    for j in range(len(self._interpolators))
-                ]
-            )
+        #     interpolated_map = np.array(
+        #         [
+        #             self._interpolators[j](np.atleast_1d(parameter_values))
+        #             for j in range(len(self._interpolators))
+        #         ]
+        #     )
 
         # map_shape = [x.shape[0] for x in list(self._map_grids.values())]
         map_shape = [x.shape[0] for x in [self._E, self._L, self._B]]

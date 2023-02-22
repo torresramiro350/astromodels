@@ -61,6 +61,7 @@ if os.environ.get("ASTROMODELS_DEBUG", None) is None:
         Log_parabola,
         Log_uniform_prior,
         MissingDataFile,
+        MissingSpatialDataFile,
         ModelAssertionViolation,
         ModelFactory,
         ModifiedBlackbody,

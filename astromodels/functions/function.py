@@ -2388,8 +2388,8 @@ def get_function(function_name, composite_function_expression=None):
 
                 instance = TemplateModel(function_name)
 
-            # except MissingDataFile:
-            except KeyError:
+            # except KeyError:
+            except MissingDataFile:
 
                 from astromodels.functions.spatial_model import (
                     HaloModel,
