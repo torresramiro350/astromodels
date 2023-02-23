@@ -2392,8 +2392,8 @@ def get_function(function_name, composite_function_expression=None):
 
                 instance = TemplateModel(function_name)
 
-            # except KeyError:
-            except MissingDataFile:
+            # except MissingDataFile:
+            except KeyError:
 
                 try:
 
