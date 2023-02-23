@@ -232,10 +232,10 @@ class ModelFactory(object):
 
             self._delLon = f[ihdu].header["CDELT1"]
             self._delLat = f[ihdu].header["CDELT2"]
-            self._delEn = f[ihdu].header["CDELT3"]
+            self._delEn = 0.2  # f[ihdu].header["CDELT3"]
             self._refLon = f[ihdu].header["CRVAL1"]
             self._refLat = f[ihdu].header["CRVAL2"]
-            self._refEn = f[ihdu].header["CRVAL3"]  # Log(E/MeV) -> GeV to MeV
+            self._refEn = 5  # f[ihdu].header["CRVAL3"]  # Log(E/MeV) -> GeV to MeV
             self._refLonPix = f[ihdu].header["CRPIX1"]
             self._refLatPix = f[ihdu].header["CRPIX2"]
             self._refEnPix = f[ihdu].header["CRPIX3"]
@@ -1030,15 +1030,16 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         # TODO: will investigate if the current method works and remove
         # TODO: this later.
-        # min_longitude: float = self.ramin
-        # max_longitude: float = self.ramax
-        # min_latitude: float = self.decmin
-        # max_latitude: float = self.decmax
-        # use the boundaries from the template to define the boundaries
-        min_longitude = min(self._L)
-        max_longitude = max(self._L)
-        min_latitude = min(self._B)
-        max_latitude = max(self._B)
-        # print(min_longitude, max_longitude, min_latitude, max_latitude)
+        try:
+            min_longitude: float = self.ramin
+            max_longitude: float = self.ramax
+            min_latitude: float = self.decmin
+            max_latitude: float = self.decmax
+            # use the boundaries from the template to define the boundaries
+        except Exception:
+            min_longitude = min(self._L)
+            max_longitude = max(self._L)
+            min_latitude = min(self._B)
+            max_latitude = max(self._B)
 
         return (min_longitude, max_longitude), (min_latitude, max_latitude)
