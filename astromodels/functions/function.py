@@ -2379,6 +2379,10 @@ def get_function(function_name, composite_function_expression=None):
 
             # NOTE: import here to avoid circular import
 
+            from astromodels.functions.spatial_model import (
+                HaloModel,
+                MissingSpatialDataFile,
+            )
             from astromodels.functions.template_model import (
                 MissingDataFile,
                 TemplateModel,
@@ -2391,25 +2395,24 @@ def get_function(function_name, composite_function_expression=None):
             # except KeyError:
             except MissingDataFile:
 
-                from astromodels.functions.spatial_model import (
-                    HaloModel,
-                    MissingSpatialDataFile,
-                )
-
                 try:
 
                     instance = HaloModel(function_name)
 
                 except MissingSpatialDataFile:
 
+                    # log.error(
+                    # "Function %s is not known. Known functions are: %s"
+                    # % (function_name, ",".join(list(_known_functions.keys())))
+                    # )
                     log.error(
-                        "Function %s is not known. Known functions are: %s"
-                        % (function_name, ",".join(list(_known_functions.keys())))
+                        f"Function {function_name} is not known. Known functions are: {','.join(list(_known_functions.keys()))}"
                     )
 
                     raise UnknownFunction()
 
                 else:
+
                     return instance
 
             else:
@@ -2564,6 +2567,7 @@ def _parse_function_expression(function_specification):
             # It might be a template
 
             # This import is here to avoid circular dependency between this module and TemplateModel.py
+            import astromodels.functions.spatial_model
             import astromodels.functions.template_model
 
             try:
@@ -2572,24 +2576,27 @@ def _parse_function_expression(function_specification):
                     unique_function
                 )
 
-            except KeyError:
-
-                import astromodels.functions.spatial_model
+            except astromodels.functions.template_model.MissingDataFile:
 
                 try:
                     instance = astromodels.functions.spatial_model.HaloModel(
                         unique_function
                     )
 
-                except astromodels.functions.spatial_model.MissingSpatialDataFile as e:
+                except astromodels.functions.spatial_model.MissingSpatialDataFile:
 
                     # It's not a template
 
+                    # raise UnknownFunction(
+                    # "Function %s in expression %s is unknown. If this is a template model, you are "
+                    # "probably missing the data file"
+                    # % (unique_function, function_specification)
+                    # )
                     raise UnknownFunction(
-                        "Function %s in expression %s is unknown. If this is a template model, you are "
+                        f"Function {unique_function} in expression {function_specification} is "
+                        "unknown. If this is a template model, you are "
                         "probably missing the data file"
-                        % (unique_function, function_specification)
-                    ) from e
+                    )
 
                 else:
                     instances[complete_function_specification] = instance
