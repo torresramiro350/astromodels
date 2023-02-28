@@ -2,7 +2,6 @@ import collections
 import gc
 import hashlib
 import os
-import pathlib
 import re
 from builtins import object, range, str
 from dataclasses import dataclass
@@ -12,6 +11,7 @@ from typing import Any, Dict, List, Optional, OrderedDict, Union
 import astropy.units as u
 import h5py
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 import scipy.interpolate
 from astropy.coordinates import ICRS, BaseCoordinateFrame, SkyCoord
@@ -19,7 +19,6 @@ from astropy.io import fits
 from future.utils import with_metaclass
 from interpolation import interp
 from interpolation.splines import eval_linear
-from pandas import HDFStore
 from scipy.interpolate import RegularGridInterpolator
 
 from astromodels.core.parameter import Parameter
@@ -28,12 +27,14 @@ from astromodels.utils import get_user_data_path
 from astromodels.utils.angular_distance import angular_distance_fast
 from astromodels.utils.logging import setup_logger
 
+# from pandas import HDFStore
+# import pathlib
+
 log = setup_logger(__name__)
 
 __author__ = "Ramiro"
 
 # NOTE: Script adapted GalProp and TemplateModelFactory in Astromodels.
-
 
 __all__ = [
     "IncompleteGrid",
@@ -83,16 +84,18 @@ _classes_cache = {}
 
 
 class GridInterpolate(object):
-    def __init__(self, grid, values):
-        self._grid = grid
-        self._values = np.ascontiguousarray(values)
 
-    def __call__(self, v):
+    def __init__(self, grid, values) -> None:
+        self._grid: npt.ArrayLike = grid
+        self._values: npt.ArrayLike = np.ascontiguousarray(values)
+
+    def __call__(self, v) -> None:
         return eval_linear(self._grid, self._values, v)
 
 
 class UnivariateSpline(object):
-    def __init__(self, x, y):
+
+    def __init__(self, x, y) -> None:
         self._x = x
         self._y = y
 
@@ -104,14 +107,15 @@ class UnivariateSpline(object):
 # The information from the source comes from FITS files with
 # 3D template model maps
 class ModelFactory(object):
+
     def __init__(
         self,
-        name,
-        description,
-        names_of_parameters,
-        degree_of_interpolation=1,
-        spline_smoothing_factor=0,
-    ):
+        name: str,
+        description: str,
+        names_of_parameters: list[str],
+        degree_of_interpolation: int = 1,
+        spline_smoothing_factor: int = 0,
+    ) -> None:
         """Class builds a data table from 3d mapcube templates with information
         on morphology and spectral parameters for different energy bins. These
         parameters are used for interpolation in the class SpatialModel
@@ -132,6 +136,22 @@ class ModelFactory(object):
         """
 
         self._data_frame = None
+        self._delLon: float
+        self._delLat: float
+        self._delEn: float
+        self._refLon: float
+        self._refLat: float
+        self._refEn: float
+        self._refLonPix: float
+        self._refLatPix: float
+        self._refEnPix: float
+        self._nl: int
+        self._nb: int
+        self._ne: int
+        self._map: npt.ArrayLike
+        self._L: np.ndarray
+        self._B: np.ndarray
+        self._E: np.ndarray
 
         # Store the model name
         # Ensure that it contains no spaces nor special characters
@@ -139,10 +159,8 @@ class ModelFactory(object):
 
         if re.match("[a-zA-Z_][a-zA-Z0-9_]*", name) is None:
 
-            log.error(
-                f"The provided name {name} is not a valid name. "
-                "You cannot use spaces, nor special characters."
-            )
+            log.error(f"The provided name {name} is not a valid name. "
+                      "You cannot use spaces, nor special characters.")
 
             raise RuntimeError()
 
@@ -176,10 +194,8 @@ class ModelFactory(object):
 
         if grid_.shape[0] <= 1:
 
-            log.error(
-                "A grid for a parameter must containt at least two "
-                "elements for interpolation."
-            )
+            log.error("A grid for a parameter must containt at least two "
+                      "elements for interpolation.")
 
             raise AssertionError()
 
@@ -189,13 +205,14 @@ class ModelFactory(object):
 
         self._parameters_grids[parameter_name] = grid_
 
-    def add_interpolation_data(
-        self, fitsfile: Path, ihdu: int = 0, **parameters_values_input: dict
-    ):
+    def add_interpolation_data(self,
+                               fits_file: Path,
+                               ihdu: int = 0,
+                               **parameters_values_input: dict):
         """Fill data table with information from 3D mapcube templates.
 
         Args:
-            fitsfile (str): FITS file with 3D mapcube.
+            fits_file (str): FITS file with 3D mapcube.
             ihdu (int, optional): Primary HDU identifier. Defaults to 0.
 
         Raises:
@@ -210,25 +227,23 @@ class ModelFactory(object):
 
             if grid is None:
 
-                log.error(
-                    "You need to define a grid for all parameters, "
-                    "by using the define_parameter_grid method."
-                )
+                log.error("You need to define a grid for all parameters, "
+                          "by using the define_parameter_grid method.")
 
                 raise IncompleteGrid()
 
         # Now load the information from the FITS 3D template model
         # template models contain flux values in terms of energy, RA, and dec
 
-        if fitsfile is None:
+        if fits_file is None:
 
             log.error("You need to specify a FITS file with a template map.")
 
             raise RuntimeError()
 
-        self._fitsfile = fitsfile
+        self._fits_file: Path = Path(fits_file)
 
-        with fits.open(self._fitsfile) as f:
+        with fits.open(self._fits_file) as f:
 
             self._delLon = f[ihdu].header["CDELT1"]
             self._delLat = f[ihdu].header["CDELT2"]
@@ -240,7 +255,7 @@ class ModelFactory(object):
             self._refLatPix = f[ihdu].header["CRPIX2"]
             self._refEnPix = f[ihdu].header["CRPIX3"]
 
-            self._map = f[ihdu].data  # 3D array containing the flux values
+            self._map = np.array(f[ihdu].data)  # 3D array containing the flux values
 
             self._nl = f[ihdu].header["NAXIS1"]  # Longitude
             self._nb = f[ihdu].header["NAXIS2"]  # Latitude
@@ -287,7 +302,7 @@ class ModelFactory(object):
 
             log.debug(f"grid shape: {shape}")
 
-            self._data_frame = np.zeros(tuple(shape))
+            self._data_frame: np.ndarray = np.zeros(tuple(shape))
 
             log.debug(f"grid shape actual: {self._data_frame.shape}")
 
@@ -295,7 +310,7 @@ class ModelFactory(object):
             # The dataframe is indexed by a parameter multi-index for rows and
             # with the 3D template multi-index information as the columns
 
-            log.info("Creating the multi-indices....")
+            # log.info("Creating the multi-indices....")
 
         # Make sure we have all parameters and order the values in the same way as the dictionary
         parameter_idx = []
@@ -320,11 +335,12 @@ class ModelFactory(object):
             for j, l in enumerate(self._L):
                 for k, b in enumerate(self._B):
 
-                    tmp = pd.to_numeric(self._map[i][j][k])
+                    # tmp = pd.to_numeric(self._map[i][j][k])
+                    tmp: np.float64 = self._map[i][j][k]
 
                     self._data_frame[tuple(parameter_idx)][i][j][k] = tmp
 
-    def save_data(self, overwrite=False):
+    def save_data(self, overwrite: bool = False) -> None:
         """Save the table into a file for later usage with SpatialModel.
 
         Args:
@@ -343,11 +359,9 @@ class ModelFactory(object):
         # First make sure that the whole data matrix has been filled
         if np.any(np.isnan(self._data_frame)):
 
-            log.error(
-                "You have NaNs in the data matrix. Usually this means "
-                "that you didn't fill it up completely, or that some of "
-                "your data contains nans. Cannot save the file."
-            )
+            log.error("You have NaNs in the data matrix. Usually this means "
+                      "that you didn't fill it up completely, or that some of "
+                      "your data contains nans. Cannot save the file.")
 
             raise AssertionError()
 
@@ -367,23 +381,19 @@ class ModelFactory(object):
 
                     os.remove(filename_sanitized)
 
-                except IOError as e:
+                except Exception as exc:
 
-                    log.error(
-                        f"The file {filename_sanitized} already exists. "
-                        "and cannot be removed (maybe you do not have "
-                        "enough permissions to do so?)."
-                    )
+                    log.error(f"The file {filename_sanitized} already exists. "
+                              "and cannot be removed (maybe you do not have "
+                              "enough permissions to do so?).")
 
-                    raise IOError() from e
+                    raise IOError() from exc
 
             else:
 
-                log.error(
-                    f"The file {filename_sanitized} already exists! "
-                    "You cannot call two different spatial models with the "
-                    "same name."
-                )
+                log.error(f"The file {filename_sanitized} already exists! "
+                          "You cannot call two different spatial models with the "
+                          "same name.")
 
                 raise IOError()
 
@@ -405,7 +415,7 @@ class ModelFactory(object):
 
 
 # This adds a method to a class at run time
-def add_method(self, method, name=None):
+def add_method(self, method, name=None) -> None:
 
     if name is None:
 
@@ -415,14 +425,14 @@ def add_method(self, method, name=None):
 
 
 class RectBivariateSplineWrapper(object):
-    """Wrapper around RectBivariateSplien which supplies a __call__ method
+    """Wrapper around RectBivariateSpline which supplies a __call__ method
     which accepts the same syntax as other interpolation methods.py
 
     Args:
         object (RectBivariateSpline): Interpolation for 2D.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
 
         # We can use interp2, which features spline interpolation instead of linear interpolation
         self._interpolator = scipy.interpolate.RectBivariateSpline(*args, **kwargs)
@@ -445,13 +455,13 @@ class TemplateFile:
     name: str
     description: str
     grid: np.ndarray
-    energies: np.ndarray
-    lats: np.ndarray
-    lons: np.ndarray
-    parameters: Dict[str, np.ndarray]
+    energies: npt.ArrayLike
+    lats: npt.ArrayLike
+    lons: npt.ArrayLike
+    parameters: Dict[str, npt.ArrayLike]
     parameter_order: List[str]
     degree_of_interpolation: int
-    spline_smoothing_factor: float
+    spline_smoothing_factor: int
 
     def save(self, file_name: str):
         """
@@ -531,7 +541,6 @@ class TemplateFile:
 
 # class SpatialModel(with_metaclass(FunctionMeta, Function3D)):
 class HaloModel(Function3D, metaclass=FunctionMeta):
-
     r"""
     description: 3D interpolation over morphology of a source using FITS templates
                 with spectral and spatial information.
@@ -566,7 +575,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         self,
         model_name,
         other_name=None,
-    ):
+    ) -> None:
         """
         Custom initialization for this model
         :param model_name: the name of the model, corresponding to the
@@ -585,10 +594,8 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         if not filename_sanitized.exists():
 
-            log.error(
-                f"The data file {filename_sanitized} does not exist."
-                " Did you use the ModelFactory?"
-            )
+            log.error(f"The data file {filename_sanitized} does not exist."
+                      " Did you use the ModelFactory?")
 
             raise MissingSpatialDataFile
 
@@ -617,9 +624,9 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
             self._parameters_grids[str(k)] = template_file.parameters[key]
 
         # get the template parameters
-        self._E = template_file.energies
-        self._B = template_file.lats
-        self._L = template_file.lons
+        self._E: npt.ArrayLike = template_file.energies
+        self._B: npt.ArrayLike = template_file.lats
+        self._L: npt.ArrayLike = template_file.lons
 
         # get the dataframe
         # self.grid = template_file.grid
@@ -671,8 +678,9 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         gc.collect()
 
-    def _prepare_interpolators(self, log_interp: bool, data_frame: np.ndarray):
-        """Reads column of flux values and performs interpolation over the parameters specified in ModelFactory
+    def _prepare_interpolators(self, log_interp: bool, data_frame: npt.ArrayLike) -> None:
+        """Reads column of flux values and performs interpolation over the
+        parameters specified in ModelFactory
 
         Parameters
         ----------
@@ -683,15 +691,18 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         Returns
         -------
-        numpy.nadarray(interpolators)
-            returns a numpy array with interpolating functions for evaluation in the interpolate method.
+        numpy.ndarray(interpolators)
+            returns a numpy array with interpolating functions for evaluation
+            in the interpolate method.
 
         Raises
         ------
         RuntimeError
-            make sure there are number of points = n + 1 for interpolation of degree n for first variable
+            make sure there are number of points = n + 1 for interpolation of
+            degree n for first variable
         RuntimeError
-            make sure there are number of points = n + 1 for interpolation of degree n for second variable
+            make sure there are number of points = n + 1 for interpolation of
+            degree n for second variable
         """
 
         log.info("Preparing the interpolators...")
@@ -700,7 +711,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         para_shape = np.array([x.shape[0] for x in list(self._parameters_grids.values())])
 
         # interpolate over the parameters
-        self._interpolators = []
+        self._interpolators: list = []
 
         for i, e in enumerate(self._E):
             for j, l in enumerate(self._L):
@@ -717,9 +728,8 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
                     else:
 
-                        this_data = np.array(
-                            data_frame[..., i, j, k].reshape(*para_shape), dtype=float
-                        )
+                        this_data = np.array(data_frame[..., i, j, k].reshape(*para_shape),
+                                             dtype=float)
 
                         self._is_log10 = False
 
@@ -727,14 +737,10 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
                         parameters = list(self._parameters_grids.values())
 
-                        xpoints = np.array(
-                            [parameters[x] for x in range(len(parameters))][0]
-                        )
-                        ypoints = np.array(
-                            [this_data[x] for x in range(this_data.shape[0])]
-                        )
+                        xpoints = np.array([parameters[x] for x in range(len(parameters))][0])
+                        ypoints = np.array([this_data[x] for x in range(this_data.shape[0])])
 
-                        this_interpolator = UnivariateSpline(xpoints, ypoints)
+                        this_interpolator: UnivariateSpline = UnivariateSpline(xpoints, ypoints)
 
                     elif len(list(self._parameters_grids.values())) == 2:
 
@@ -745,12 +751,10 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
                         # both directions
 
                         def msg(interp_degree: int, parameter_name: str) -> str:
-                            return (
-                                f"You cannot use an interpolation degree of {interp_degree} if "
-                                f"you don't provide at least {interp_degree} points "
-                                f"in the {parameter_name} direction. Increase the number of "
-                                "templates or decrease interpolation degree."
-                            )
+                            return (f"You cannot use an interpolation degree of {interp_degree} if "
+                                    f"you don't provide at least {interp_degree} points "
+                                    f"in the {parameter_name} direction. Increase the number of "
+                                    "templates or decrease interpolation degree.")
 
                         if len(x) <= self._degree_of_interpolation:
 
@@ -764,25 +768,20 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
                             raise RuntimeError()
 
-                        this_interpolator = RectBivariateSplineWrapper(
+                        this_interpolator: RectBivariateSplineWrapper = (RectBivariateSplineWrapper(
                             x,
                             y,
                             this_data,
                             kx=self._degree_of_interpolation,
                             ky=self._degree_of_interpolation,
                             s=self._spline_smoothing_factor,
-                        )
+                        ))
 
                     else:
 
                         # In more than 2d, we can only interpolate linearly
-                        this_interpolator = GridInterpolate(
-                            tuple(
-                                [
-                                    np.array(x)
-                                    for x in list(self._parameters_grids.values())
-                                ]
-                            ),
+                        this_interpolator: GridInterpolate = GridInterpolate(
+                            tuple([np.array(x) for x in list(self._parameters_grids.values())]),
                             this_data,
                         )
 
@@ -806,44 +805,22 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
             lons (np.ndarray): Longitude (RAs)
             lats (np.ndarray): Latitude (Dec) values
             parameter_values (np.ndarray): morphology parameters where to
-            evalute the interpolating function from _prepare_interpolators.
+            evaluate the interpolating function from _prepare_interpolators.
 
         Raises:
             AttributeError: Check if _prepare_interpolators has been run,
             if it hasn't yet been run. Run it now.
 
         Returns:
-            np.ndarray: Returns interpolated values over energies, longiutes,
+            np.ndarray: Returns interpolated values over energies, longitudes,
             and latitudes.
         """
 
         # gather all interpolations for these parameters' values
-        interpolated_map = np.array(
-            [
-                self._interpolators[j](np.atleast_1d(parameter_values))
-                for j in range(len(self._interpolators))
-            ]
-        )
-
-        # try:
-        #
-        #     interpolated_map = np.array(
-        #         [
-        #             self._interpolators[j](np.atleast_1d(parameter_values))
-        #             for j in range(len(self._interpolators))
-        #         ]
-        #     )
-
-        # except AttributeError:
-
-        #     self._prepare_interpolators(log_interp=False, data_frame=self.grid)
-
-        #     interpolated_map = np.array(
-        #         [
-        #             self._interpolators[j](np.atleast_1d(parameter_values))
-        #             for j in range(len(self._interpolators))
-        #         ]
-        #     )
+        interpolated_map = np.array([
+            self._interpolators[j](np.atleast_1d(parameter_values))
+            for j in range(len(self._interpolators))
+        ])
 
         # map_shape = [x.shape[0] for x in list(self._map_grids.values())]
         map_shape = [x.shape[0] for x in [self._E, self._L, self._B]]
@@ -867,7 +844,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         # evaluate the interpolators over energy, ra, and dec
         for i, e in enumerate(energies):
 
-            engs = np.repeat(e, lats.size)
+            engs: npt.ArrayLike = np.repeat(e, lats.size)
 
             # slice_points = tuple((engs, lats, lons))
 
@@ -882,11 +859,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
                 log_interpolated_slice = interpolator((engs, lons, lats))
 
                 interpolated_slice = np.array(
-                    [
-                        0.0 if x == 0.0 else np.power(10.0, x)
-                        for x in log_interpolated_slice
-                    ]
-                )
+                    [0.0 if x == 0.0 else np.power(10.0, x) for x in log_interpolated_slice])
 
             else:
                 # interpolated_slice = interpolator(tuple([engs, lons, lats]))
@@ -900,9 +873,9 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
     def _setup(self):
 
-        self._frame = "icrs"  # ICRS()
+        self._frame = "ICRS"  # ICRS()
 
-    def clean(self):
+    def clean(self) -> None:
         """
         Table models can consume a lof of memory.
         This method calls a clean method and removes some of the memory
@@ -915,11 +888,11 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         log.info("You have cleaned the table model and it will no longer be usable.")
 
-    def __del__(self):
+    def __del__(self) -> None:
 
         self.clean()
 
-    def _set_units(self, x_unit, y_unit, z_unit, w_unit):
+    def _set_units(self, x_unit, y_unit, z_unit, w_unit) -> None:
 
         self.lon0.unit = x_unit
         self.lat0.unit = y_unit
@@ -945,9 +918,8 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         # galprop likes MeV, 3ML likes keV
         log_energies = np.log10(energies) - np.log10((u.MeV.to("keV") / u.keV).value)
 
-        return np.multiply(
-            K, self._interpolate(log_energies, lons, lats, args)
-        )  # if templates are normalized no need to convert back
+        return np.multiply(K, self._interpolate(
+            log_energies, lons, lats, args))  # if templates are normalized no need to convert back
 
     # def set_frame(self, new_frame):
     # """
@@ -969,23 +941,26 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         data = super(Function3D, self).to_dict(minimal)
 
-        # if not minimal:
-        #
-        #     data["extra_setup"] = {
-        #         "_frame": self._frame,
-        #         "ramin": self.ramin,
-        #         "ramax": self.ramax,
-        #         "decmin": self.decmin,
-        #         "decmax": self.decmax,
-        #     }
+        if not minimal:
+
+            data["extra_setup"] = {
+                "_frame": self._frame,
+                "ramin": self.ramin,
+                "ramax": self.ramax,
+                "decmin": self.decmin,
+                "decmax": self.decmax,
+            }
 
         return data
 
     # Define the region within the template ROI
     # TODO: set as pending to implement in the add_interpolation method later
-    def define_region(
-        self, a: float, b: float, c: float, d: float, galactic: bool = False
-    ):
+    def define_region(self,
+                      a: float,
+                      b: float,
+                      c: float,
+                      d: float,
+                      galactic: bool = False) -> tuple[float, float, float, float]:
         """Define the boundaries of template
 
         Args:
@@ -1008,9 +983,9 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
             bmin: float = c
             bmax: float = d
 
-            _coord = SkyCoord(
-                l=[lmin, lmin, lmax, lmax], b=[bmin, bmax, bmax, bmin], frame="galactic"
-            )
+            _coord = SkyCoord(l=[lmin, lmin, lmax, lmax],
+                              b=[bmin, bmax, bmax, bmin],
+                              frame="galactic")
 
             self.ramin: float = min(_coord.transform_to(self.frame.value).ra.value)
             self.ramax: float = max(_coord.transform_to(self.frame.value).ra.value)
@@ -1026,20 +1001,11 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         return self.ramin, self.ramax, self.decmin, self.decmax
 
-    def get_boundaries(self):
+    def get_boundaries(self) -> tuple[tuple[float, float], tuple[float, float]]:
 
-        # TODO: will investigate if the current method works and remove
-        # TODO: this later.
-        try:
-            min_longitude: float = self.ramin
-            max_longitude: float = self.ramax
-            min_latitude: float = self.decmin
-            max_latitude: float = self.decmax
-            # use the boundaries from the template to define the boundaries
-        except Exception:
-            min_longitude = min(self._L)
-            max_longitude = max(self._L)
-            min_latitude = min(self._B)
-            max_latitude = max(self._B)
+        min_longitude: float = self.ramin
+        max_longitude: float = self.ramax
+        min_latitude: float = self.decmin
+        max_latitude: float = self.decmax
 
         return (min_longitude, max_longitude), (min_latitude, max_latitude)
