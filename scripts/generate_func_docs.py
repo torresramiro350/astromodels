@@ -12,9 +12,17 @@ models_to_exclude = [
     "TemplateModel",
     "HaloModel",
     "SpatialTemplate_2D",
+    "GenericFunction"
 ]
 
-positive_priors = ["Log_uniform_prior", "Log_normal"]
+positive_priors = [
+    "Log_uniform_prior",
+    "Log_normal",
+    "Gamma",
+    "Beta",
+    "Exponential",
+    "Powerlaw_Prior",
+]
 
 linear_models = [
     "Constant",
@@ -46,7 +54,6 @@ with open("doc_gen_priors.md") as f:
 
 
 base_path = Path("../docs/notebooks").resolve()
-
 
 # we will loop through all the functions and generate docs for them
 
