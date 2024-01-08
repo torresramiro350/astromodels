@@ -10,6 +10,7 @@ from ._version import get_versions
 #
 
 if os.environ.get("ASTROMODELS_DEBUG", None) is None:
+    #
     from .core.serialization import *
     from .core.units import get_units
     from .functions import has_atomdb, has_ebltable, has_gsl, has_naima
