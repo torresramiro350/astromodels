@@ -89,7 +89,6 @@ from .priors import (
     Exponential,
     Powerlaw_Prior,
 )
-from .spatial_model import HaloModel, MissingSpatialDataFile, ModelFactory
 from .template_model import (
     MissingDataFile,
     TemplateModel,
@@ -152,9 +151,6 @@ __all__ = [
     "TemplateModelFactory",
     "XSPECTableModel",
     "MissingDataFile",
-    "HaloModel",
-    "MissingSpatialDataFile",
-    "ModelFactory",
     "Log_parabola",
     "Blackbody",
     "Function1D",
