@@ -3,7 +3,6 @@ from __future__ import absolute_import
 import os
 
 from ._version import get_versions
-from .utils.configuration import astromodels_config
 
 # Import the version
 
@@ -13,6 +12,7 @@ from .utils.configuration import astromodels_config
 if os.environ.get("ASTROMODELS_DEBUG", None) is None:
 
     #
+    from .utils.configuration import astromodels_config, show_configuration
     from .core.memoization import use_astromodels_memoization
     from .core.model import Model
     from .core.model_parser import clone_model, load_model
