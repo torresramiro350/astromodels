@@ -2157,55 +2157,56 @@ def get_function(function_name, composite_function_expression=None):
                 instance = TemplateModel(function_name)
 
             except MissingDataFile:
-                # except KeyError:
+                # log.error(
+                # "Function %s is not known. Known functions are: %s"
+                # % (function_name, ",".join(list(_known_functions.keys())))
+                # )
+                log.error(
+                    f"Function {function_name} is not known. Known functions are: {','.join(list(_known_functions.keys()))}"
+                )
 
-                try:
-                    instance = HaloModel(function_name)
-
-                except MissingSpatialDataFile:
-                    # log.error(
-                    # "Function %s is not known. Known functions are: %s"
-                    # % (function_name, ",".join(list(_known_functions.keys())))
-                    # )
-                    log.error(
-                        f"Function {function_name} is not known. Known functions are: {','.join(list(_known_functions.keys()))}"
-                    )
-
-                    raise UnknownFunction()
-
-                # else:
-
-                return instance
+                raise UnknownFunction()
 
             # see if it is an emulator model from
             # netspec
 
             except InvalidTemplateModelFile:
                 try:
-                    log.debug("check if it is an emulator")
+                    instance = HaloModel(function_name)
+                    loaded_template = True
 
-                    from netspec import EmulatorModel
-
-                    instance = EmulatorModel(function_name)
-
-                except Exception as e:
-                    log.debug(e)
+                except MissingSpatialDataFile:
+                    loaded_template = False
 
                     log.error(
-                        "Function %s is not known. Known functions are: %s"
-                        % (
-                            function_name,
-                            ",".join(list(_known_functions.keys())),
-                        )
+                        f"Function {function_name} is not known. Known functions are: {','.join(list(_known_functions.keys()))}"
                     )
 
                     raise UnknownFunction()
 
-                else:
-                    return instance
+                if not loaded_template:
+                    try:
+                        log.debug("check if it is an emulator")
 
-            else:
+                        from netspec import EmulatorModel
+
+                        instance = EmulatorModel(function_name)
+
+                    except Exception as e:
+                        log.debug(e)
+
+                        log.error(
+                            "Function %s is not known. Known functions are: %s"
+                            % (
+                                function_name,
+                                ",".join(list(_known_functions.keys())),
+                            )
+                        )
+
+                        raise UnknownFunction() from e
+
                 return instance
+            return instance
 
 
 def get_function_class(function_name):

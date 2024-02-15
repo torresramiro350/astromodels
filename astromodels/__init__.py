@@ -21,6 +21,7 @@ if os.environ.get("ASTROMODELS_DEBUG", None) is None:
         SettingOutOfBounds,
         turn_off_parameter_transforms,
     )
+    # from .functions.spatial_model import HaloModel, ModelFactory
     from .core.polarization import LinearPolarization, StokesPolarization
     from .core.serialization import *
     from .core.spectral_component import SpectralComponent
@@ -54,6 +55,9 @@ if os.environ.get("ASTROMODELS_DEBUG", None) is None:
         GalPropTemplate_3D,
         Gaussian,
         Gaussian_on_sphere,
+        HaloModel,
+        ModelFactory,
+        MissingSpatialDataFile,
         Inverse_cutoff_powerlaw,
         Latitude_galactic_diffuse,
         Line,

@@ -96,6 +96,12 @@ from .template_model import (
     XSPECTableModel,
 )
 
+from .spatial_model import (
+    HaloModel,
+    ModelFactory,
+    MissingSpatialDataFile
+)
+
 __all__ = [
     "Band",
     "Band_Calderone",
@@ -139,6 +145,9 @@ __all__ = [
     "Cauchy",
     "Cosine_Prior",
     "Gaussian",
+    "HaloModel",
+    "ModelFactory",
+    "MissingSpatialDataFile",
     "Log_normal",
     "Log_uniform_prior",
     "Truncated_gaussian",
