@@ -128,7 +128,7 @@ class ModelFactory:
         special characters.
         """
 
-        self._data_frame: Optional[NDArray[np.float64] | None] = None
+        self._data_frame: Optional[ndarray] = None
         self._delLon: float
         self._delLat: float
         self._delEn: float
@@ -169,13 +169,11 @@ class ModelFactory:
         for parameter_name in names_of_parameters:
             self._parameters_grids[parameter_name] = None
 
-    def define_parameter_grid(self, parameter_name: str, grid: np.ndarray) -> None:
+    def define_parameter_grid(self, parameter_name: str, grid: ndarray) -> None:
         """Defines the user provider parameter grid for a given parameter with its associated name
 
         :param parameter_name: Name of parameter for later access when using model
-        :type parameter_name: str
         :param grid: Array of allowed values for the paremter
-        :type grid: np.ndarray
         :raises AssertionError: Check that the parameter is part of the model
         :raises AssertionError: Ensure all parameter values in the grid are non-repeating
         :return: none
@@ -242,21 +240,22 @@ class ModelFactory:
         self._fits_file: Path = Path(fits_file)
 
         with fits.open(self._fits_file) as f:
-            self._delLon = f[ihdu].header["CDELT1"]
-            self._delLat = f[ihdu].header["CDELT2"]
+            self._delLon = f[ihdu].header["CDELT1"]  # type: ignore
+            self._delLat = f[ihdu].header["CDELT2"]  # type: ignore
             self._delEn = 0.2  # f[ihdu].header["CDELT3"]
-            self._refLon = f[ihdu].header["CRVAL1"]
-            self._refLat = f[ihdu].header["CRVAL2"]
+            self._refLon = f[ihdu].header["CRVAL1"]  # type: ignore
+            self._refLat = f[ihdu].header["CRVAL2"]  # type: ignore
             self._refEn = 5  # f[ihdu].header["CRVAL3"]  # Log(E/MeV) -> GeV to MeV
-            self._refLonPix = f[ihdu].header["CRPIX1"]
-            self._refLatPix = f[ihdu].header["CRPIX2"]
-            self._refEnPix = f[ihdu].header["CRPIX3"]
+            self._refLonPix = f[ihdu].header["CRPIX1"]  # type: ignore
+            self._refLatPix = f[ihdu].header["CRPIX2"]  # type: ignore
+            self._refEnPix = f[ihdu].header["CRPIX3"]  # type: ignore
 
-            self._map = np.array(f[ihdu].data)  # 3D array containing the flux values
+            # 3D array containing the flux values
+            self._map: ndarray = np.array(f[ihdu].data, dtype=float)  # type: ignore
 
-            self._nl = f[ihdu].header["NAXIS1"]  # Longitude
-            self._nb = f[ihdu].header["NAXIS2"]  # Latitude
-            self._ne = f[ihdu].header["NAXIS3"]  # Energy
+            self._nl = f[ihdu].header["NAXIS1"]  # Longitude # type: ignore
+            self._nb = f[ihdu].header["NAXIS2"]  # Latitude # type: ignore
+            self._ne = f[ihdu].header["NAXIS3"]  # Energy # type: ignore
 
             self._L = np.linspace(
                 self._refLon - self._refLonPix * self._delLon,
@@ -662,9 +661,22 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         gc.collect()
 
-    def _prepare_interpolators(
-        self, log_interp: bool, data_frame: NDArray[np.float64]
-    ) -> None:
+    @staticmethod
+    def _msg(interp_degree: int, parameter_name: str) -> str:
+        """Retrun a message for the user
+
+        :param interp_degree: degree of interpolation
+        :param parameter_name: name of parameter over which to interpolate
+        :return: message to user
+        """
+        return (
+            f"You cannot use an interpolation degree of {interp_degree} if "
+            f"you don't provide at least {interp_degree} points "
+            f"in the {parameter_name} direction. Increase the number of "
+            "templates or decrease interpolation degree."
+        )
+
+    def _prepare_interpolators(self, log_interp: bool, data_frame: ndarray) -> None:
         """Reads data frame of normalized flux values and performs interpolation
         over morphology parameters declared in ModelFactory's parameter grid
 
@@ -679,14 +691,6 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         :return: none
         :rtype: None
         """
-
-        def msg(interp_degree: int, parameter_name: str) -> str:
-            return (
-                f"You cannot use an interpolation degree of {interp_degree} if "
-                f"you don't provide at least {interp_degree} points "
-                f"in the {parameter_name} direction. Increase the number of "
-                "templates or decrease interpolation degree."
-            )
 
         log.info("Preparing the interpolators...")
 
@@ -703,9 +707,9 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         self._interpolators: list[RectBivariateSpline | GridInterpolate] = []
         interpolators = self._interpolators
         self._is_log10: bool = log_interp
-        energy_values: NDArray[np.float64] = self._E
-        lon_vals: NDArray[np.float64] = self._L
-        lat_vals: NDArray[np.float64] = self._B
+        energy_values: ndarray = self._E
+        lon_vals: ndarray = self._L
+        lat_vals: ndarray = self._B
 
         for i, _ in enumerate(energy_values):
             for j, _ in enumerate(lon_vals):
@@ -738,12 +742,12 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
                         # both directions
 
                         if len(x) <= degree_of_interpolation:
-                            log.error(msg(degree_of_interpolation, "x"))
+                            log.error(self._msg(degree_of_interpolation, "x"))
 
                             raise RuntimeError()
 
                         if len(y) <= degree_of_interpolation:
-                            log.error(msg(degree_of_interpolation, "y"))
+                            log.error(self._msg(degree_of_interpolation, "y"))
 
                             raise RuntimeError()
 
@@ -773,11 +777,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         gc.collect()
 
     def _interpolate(
-        self,
-        energies: NDArray[np.float64],
-        lons: NDArray[np.float64],
-        lats: NDArray[np.float64],
-        parameter_values: NDArray[np.float64],
+        self, energies: ndarray, lons: ndarray, lats: ndarray, parameter_values: ndarray
     ) -> NDArray[np.float64]:
         """Evaluates the morphology parameters and generates interpolated map
         that is then used for the interpolation over energy RA, Dec and energy
@@ -877,7 +877,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         consumed by the models.
         :returns:
         """
-        self._interpolators = None
+        self._interpolators = None  # type: ignore
         del self._interpolators
         gc.collect()
 
@@ -889,14 +889,14 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         self.clean()
 
     def _set_units(self, x_unit, y_unit, z_unit, w_unit) -> None:
-        self.lon0.unit = x_unit
-        self.lat0.unit = y_unit
+        self.lon0.unit = x_unit  # type: ignore
+        self.lat0.unit = y_unit  # type: ignore
 
         # self.K.unit = 1/(u.MeV * u.cm**2 * u.s * u.sr)
         # keep this units to if templates have been normalized
-        self.K.unit = 1 / (u.sr)
+        self.K.unit = 1 / (u.sr)  # type: ignore
 
-    def evaluate(self, x, y, z, K, lon0, lat0, *args):
+    def evaluate(self, x, y, z, K, lon0, lat0, *args) -> ndarray:
         lons = x
         lats = y
         energies = z
@@ -911,9 +911,8 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         # galprop likes MeV, 3ML likes keV
         log_energies = np.log10(energies) - np.log10((u.MeV.to("keV") / u.keV).value)
 
-        return np.multiply(
-            K, self._interpolate(log_energies, lons, lats, args)
-        )  # if templates are normalized no need to convert back
+        # if templates are normalized no need to convert back
+        return np.multiply(K, self._interpolate(log_energies, lons, lats, args))  # type:
 
     # def set_frame(self, new_frame):
     # """
@@ -975,10 +974,10 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
                 l=[lmin, lmin, lmax, lmax], b=[bmin, bmax, bmax, bmin], frame="galactic"
             )
 
-            self.ramin: float = min(_coord.transform_to(self.frame.value).ra.value)
-            self.ramax: float = max(_coord.transform_to(self.frame.value).ra.value)
-            self.decmin: float = min(_coord.transform_to(self.frame.value).dec.value)
-            self.decmax: float = max(_coord.transform_to(self.frame.value).dec.value)
+            self.ramin: float = min(_coord.transform_to(self.frame.value).ra.value)  # type: ignore
+            self.ramax: float = max(_coord.transform_to(self.frame.value).ra.value)  # type: ignore
+            self.decmin: float = min(_coord.transform_to(self.frame.value).dec.value)  # type: ignore
+            self.decmax: float = max(_coord.transform_to(self.frame.value).dec.value)  # type: ignore
 
         else:
             self.ramin = a
