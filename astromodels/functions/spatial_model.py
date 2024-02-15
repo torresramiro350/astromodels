@@ -801,11 +801,11 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         # gather all interpolations for these parameters' values
         current_set_of_interpolators = self._interpolators
-        interpolated_map = np.array(
+        interpolated_map: ndarray = np.array(
             [
                 interpolator(np.atleast_1d(parameter_values))
                 for interpolator in current_set_of_interpolators
-            ]
+            ],
         )
 
         # map_shape = [x.shape[0] for x in list(self._map_grids.values())]
