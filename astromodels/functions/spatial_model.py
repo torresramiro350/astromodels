@@ -106,6 +106,7 @@ class ModelFactory:
         name: str,
         description: str,
         names_of_parameters: list[str],
+        require_transformation: list[bool],
         degree_of_interpolation: int = 1,
         spline_smoothing_factor: int = 0,
     ) -> None:
@@ -128,6 +129,7 @@ class ModelFactory:
         special characters.
         """
 
+        self._require_transformations = require_transformation
         self._data_frame: Optional[ndarray] = None
         self._delLon: float
         self._delLat: float
@@ -398,6 +400,7 @@ class ModelFactory:
                 lons=self._L,
                 parameters=self._parameters_grids,
                 parameter_order=list(self._parameters_grids.keys()),
+                list_transforms=self._require_transformations,
             )
 
             template_file.save(filename_sanitized.as_posix())
@@ -453,6 +456,7 @@ class TemplateFile:
     parameter_order: list[str]
     degree_of_interpolation: int
     spline_smoothing_factor: int
+    list_transforms: list[bool]
 
     def save(self, file_name: str) -> None:
         """Serialize the contents to a file and save it
@@ -465,6 +469,7 @@ class TemplateFile:
         with h5py.File(file_name, "w") as f:
             f.attrs["name"] = self.name
             f.attrs["description"] = self.description
+            f.attrs["transformations"] = self.list_transforms
             f.attrs["degree_of_interpolation"] = self.degree_of_interpolation
             f.attrs["spline_smoothing_factor"] = self.spline_smoothing_factor
 
@@ -495,6 +500,9 @@ class TemplateFile:
             description: str = f.attrs["description"]  # type: ignore
             degree_of_interpolation: int = f.attrs["degree_of_interpolation"]  # type: ignore
             spline_smoothing_factor: int = f.attrs["spline_smoothing_factor"]  # type: ignore
+            transformations: list[bool] = f.attrs["transformations"]  # type: ignore
+
+            # f.attrs["transformations"] = self.list_transforms
 
             parameter_order: list[str] = f["parameter_order"][()]  # type: ignore
             energies: ndarray = f["energies"][()]  # type: ignore
@@ -518,6 +526,7 @@ class TemplateFile:
             lons=lons,
             parameter_order=parameter_order,
             parameters=parameters,
+            list_transforms=transformations,
             grid=grid,
         )
 
@@ -587,7 +596,9 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         self._data_file = filename_sanitized
 
         # use the file shadow to read
-        template_file: TemplateFile = TemplateFile.from_file(filename_sanitized)
+        template_file: TemplateFile = TemplateFile.from_file(
+            filename_sanitized.as_posix()
+        )
 
         self._parameters_grids = collections.OrderedDict()
 
@@ -608,6 +619,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         self._E: NDArray[np.float64] = template_file.energies
         self._B: NDArray[np.float64] = template_file.lats
         self._L: NDArray[np.float64] = template_file.lons
+        self._transformations: list[bool] = template_file.list_transforms
 
         # get the dataframe
         # self.grid = template_file.grid
@@ -630,22 +642,29 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         parameters["K"] = Parameter("K", 1.0)
         parameters["lon0"] = Parameter("lon0", 0.0, min_value=0.0, max_value=360.0)
         parameters["lat0"] = Parameter("lat0", 0.0, min_value=-90.0, max_value=90.0)
+        current_grid_keys = list(self._parameters_grids.keys())
 
-        for parameter_name in list(self._parameters_grids.keys()):
+        for par_idx, parameter_name in enumerate(current_grid_keys):
             grid = self._parameters_grids[parameter_name]
+            transform = self._transformations[par_idx]
+            if transform:
+                parameter_transformation = "log10"
+            else:
+                parameter_transformation = None
 
             parameters[parameter_name] = Parameter(
                 parameter_name,
                 np.median(grid),
                 min_value=grid.min(),
                 max_value=grid.max(),
+                transformation=parameter_transformation,  # type: ignore
             )
 
         if other_name is None:
-            super().__init__(name, function_definition, parameters)
+            super().__init__(name, function_definition, parameters)  # type: ignore
 
         else:
-            super().__init__(other_name, function_definition, parameters)
+            super().__init__(other_name, function_definition, parameters)  # type: ignore
 
         self._setup()
 
