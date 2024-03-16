@@ -7,7 +7,7 @@ import re
 from builtins import range, str
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, OrderedDict
+from typing import Optional, OrderedDict, TypeAlias
 
 import astropy.units as u
 import h5py
@@ -27,7 +27,7 @@ from astromodels.utils import get_user_data_path
 from astromodels.utils.angular_distance import angular_distance_fast
 from astromodels.utils.logging import setup_logger
 
-ndarray = NDArray[np.float64]
+ndarray: TypeAlias = NDArray[np.float64]
 
 log = setup_logger(__name__)
 
@@ -78,9 +78,9 @@ _classes_cache = {}
 class GridInterpolate:
     """Interpolation over a regular grid of n dimension (limited to linear interpolation)"""
 
-    def __init__(self, grid: NDArray[np.float64], values: NDArray[np.float64]) -> None:
-        self._grid: NDArray[np.float64] = grid
-        self._values: NDArray[np.float64] = np.ascontiguousarray(values)
+    def __init__(self, grid: ndarray, values: ndarray) -> None:
+        self._grid = grid
+        self._values = np.ascontiguousarray(values)
 
     def __call__(self, v) -> None:
         return eval_linear(self._grid, self._values, v)
@@ -106,7 +106,6 @@ class ModelFactory:
         name: str,
         description: str,
         names_of_parameters: list[str],
-        require_transformation: list[bool],
         degree_of_interpolation: int = 1,
         spline_smoothing_factor: int = 0,
     ) -> None:
@@ -129,7 +128,6 @@ class ModelFactory:
         special characters.
         """
 
-        self._require_transformations = require_transformation
         self._data_frame: Optional[ndarray] = None
         self._delLon: float
         self._delLat: float
@@ -143,10 +141,10 @@ class ModelFactory:
         self._nl: int
         self._nb: int
         self._ne: int
-        self._map: npt.ArrayLike
-        self._L: NDArray[np.float64]
-        self._B: NDArray[np.float64]
-        self._E: NDArray[np.float64]
+        self._map: ndarray
+        self._L: ndarray
+        self._B: ndarray
+        self._E: ndarray
 
         # Store the model name
         # Ensure that it contains no spaces nor special characters
@@ -289,17 +287,16 @@ class ModelFactory:
             self.hash = int(h.hexdigest(), 16)
 
         if self._data_frame is None:
-            # shape = []
-
             shape = [len(v) for k, v in self._parameters_grids.items()]
 
-            shape.append(self._E.shape[0])
-            shape.append(self._L.shape[0])
-            shape.append(self._B.shape[0])
+            shape.extend([self._E.shape[0], self._L.shape[0], self._B.shape[0]])
+            # shape.append(self._E.shape[0])
+            # shape.append(self._L.shape[0])
+            # shape.append(self._B.shape[0])
 
             log.debug(f"grid shape: {shape}")
 
-            self._data_frame: NDArray[np.float64] = np.zeros(tuple(shape))
+            self._data_frame: ndarray = np.zeros(tuple(shape))
 
             log.debug(f"grid shape actual: {self._data_frame.shape}")
 
@@ -311,7 +308,7 @@ class ModelFactory:
 
         # Make sure we have all parameters and order the values in the same way as the dictionary
         parameter_idx = []
-        for i, (key, val) in enumerate(self._parameters_grids.items()):
+        for l, (key, val) in enumerate(self._parameters_grids.items()):
             if key not in parameters_values_input:
                 log.error(f"Parameter {key} is not in input")
 
@@ -327,11 +324,11 @@ class ModelFactory:
             raise AssertionError()
 
         # filling the data map
+        # TODO: figure out whether this can be performed without a nested for loop
         for i, _ in enumerate(self._E):
             for j, _ in enumerate(self._L):
                 for k, _ in enumerate(self._B):
-                    # tmp = pd.to_numeric(self._map[i][j][k])
-                    tmp: np.float64 = self._map[i][j][k]
+                    tmp = self._map[i, j, k]
 
                     self._data_frame[tuple(parameter_idx)][i][j][k] = tmp
 
@@ -400,7 +397,6 @@ class ModelFactory:
                 lons=self._L,
                 parameters=self._parameters_grids,
                 parameter_order=list(self._parameters_grids.keys()),
-                list_transforms=self._require_transformations,
             )
 
             template_file.save(filename_sanitized.as_posix())
@@ -456,7 +452,6 @@ class TemplateFile:
     parameter_order: list[str]
     degree_of_interpolation: int
     spline_smoothing_factor: int
-    list_transforms: list[bool]
 
     def save(self, file_name: str) -> None:
         """Serialize the contents to a file and save it
@@ -469,7 +464,6 @@ class TemplateFile:
         with h5py.File(file_name, "w") as f:
             f.attrs["name"] = self.name
             f.attrs["description"] = self.description
-            f.attrs["transformations"] = self.list_transforms
             f.attrs["degree_of_interpolation"] = self.degree_of_interpolation
             f.attrs["spline_smoothing_factor"] = self.spline_smoothing_factor
 
@@ -500,9 +494,6 @@ class TemplateFile:
             description: str = f.attrs["description"]  # type: ignore
             degree_of_interpolation: int = f.attrs["degree_of_interpolation"]  # type: ignore
             spline_smoothing_factor: int = f.attrs["spline_smoothing_factor"]  # type: ignore
-            transformations: list[bool] = f.attrs["transformations"]  # type: ignore
-
-            # f.attrs["transformations"] = self.list_transforms
 
             parameter_order: list[str] = f["parameter_order"][()]  # type: ignore
             energies: ndarray = f["energies"][()]  # type: ignore
@@ -526,7 +517,6 @@ class TemplateFile:
             lons=lons,
             parameter_order=parameter_order,
             parameters=parameters,
-            list_transforms=transformations,
             grid=grid,
         )
 
@@ -616,10 +606,9 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
             self._parameters_grids[str(k)] = template_file.parameters[key]
 
         # get the template parameters
-        self._E: NDArray[np.float64] = template_file.energies
-        self._B: NDArray[np.float64] = template_file.lats
-        self._L: NDArray[np.float64] = template_file.lons
-        self._transformations: list[bool] = template_file.list_transforms
+        self._E: ndarray = template_file.energies
+        self._B: ndarray = template_file.lats
+        self._L: ndarray = template_file.lons
 
         # get the dataframe
         # self.grid = template_file.grid
@@ -642,22 +631,15 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         parameters["K"] = Parameter("K", 1.0)
         parameters["lon0"] = Parameter("lon0", 0.0, min_value=0.0, max_value=360.0)
         parameters["lat0"] = Parameter("lat0", 0.0, min_value=-90.0, max_value=90.0)
-        current_grid_keys = list(self._parameters_grids.keys())
 
-        for par_idx, parameter_name in enumerate(current_grid_keys):
+        for parameter_name in list(self._parameters_grids.keys()):
             grid = self._parameters_grids[parameter_name]
-            transform = self._transformations[par_idx]
-            if transform:
-                parameter_transformation = "log10"
-            else:
-                parameter_transformation = None
 
             parameters[parameter_name] = Parameter(
                 parameter_name,
                 np.median(grid),
                 min_value=grid.min(),
                 max_value=grid.max(),
-                transformation=parameter_transformation,  # type: ignore
             )
 
         if other_name is None:
@@ -673,7 +655,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         # Setup cache to avoid unnecessary computations
         self._cached_values: OrderedDict[
-            tuple[float, ...], NDArray[np.float64]
+            tuple[float, ...], ndarray
         ] = collections.OrderedDict()
 
         del template_file
@@ -797,7 +779,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
     def _interpolate(
         self, energies: ndarray, lons: ndarray, lats: ndarray, parameter_values: ndarray
-    ) -> NDArray[np.float64]:
+    ) -> ndarray:
         """Evaluates the morphology parameters and generates interpolated map
         that is then used for the interpolation over energy RA, Dec and energy
 
@@ -819,11 +801,10 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
             return self._cached_values[key]
 
         # gather all interpolations for these parameters' values
-        current_set_of_interpolators = self._interpolators
         interpolated_map: ndarray = np.array(
             [
                 interpolator(np.atleast_1d(parameter_values))
-                for interpolator in current_set_of_interpolators
+                for interpolator in self._interpolators
             ],
         )
 
@@ -848,7 +829,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         # # evaluate the interpolators over energy, ra, and dec
         log_interp = self._is_log10
         for i, e in enumerate(energies):
-            engs: NDArray[np.float64] = np.repeat(e, lats.size)
+            engs: ndarray = np.repeat(e, lats.size)
 
             # slice_points = tuple((engs, lats, lons))
 
