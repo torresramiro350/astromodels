@@ -6,13 +6,13 @@ import os
 import re
 from builtins import range, str
 from dataclasses import dataclass
+from itertools import product
 from pathlib import Path
 from typing import Optional, OrderedDict, TypeAlias
 
 import astropy.units as u
 import h5py
 import numpy as np
-import numpy.typing as npt
 import scipy.interpolate
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
@@ -20,11 +20,11 @@ from interpolation import interp
 from interpolation.splines import eval_linear
 from numpy.typing import NDArray
 from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator
+from tqdm import tqdm
 
 from astromodels.core.parameter import Parameter
 from astromodels.functions.function import Function3D, FunctionMeta
 from astromodels.utils import get_user_data_path
-from astromodels.utils.angular_distance import angular_distance_fast
 from astromodels.utils.logging import setup_logger
 
 ndarray: TypeAlias = NDArray[np.float64]
@@ -34,6 +34,7 @@ log = setup_logger(__name__)
 __author__ = "Ramiro"
 __version__ = "0.1"
 __comment__ = "Aims to be part of the astromodels package"
+
 
 # NOTE: Script adapted GalProp and TemplateModelFactory in Astromodels.
 
@@ -324,13 +325,7 @@ class ModelFactory:
             raise AssertionError()
 
         # filling the data map
-        # TODO: figure out whether this can be performed without a nested for loop
-        for i, _ in enumerate(self._E):
-            for j, _ in enumerate(self._L):
-                for k, _ in enumerate(self._B):
-                    tmp = self._map[i, j, k]
-
-                    self._data_frame[tuple(parameter_idx)][i][j][k] = tmp
+        self._data_frame[tuple(parameter_idx)] = self._map
 
     def save_data(self, overwrite: bool = False) -> None:
         """Save the table into a file for later usage with SpatialModel.
@@ -351,7 +346,7 @@ class ModelFactory:
                 "your data contains nans. Cannot save the file."
             )
 
-            raise AssertionError()
+            raise ValueError()
 
         # Get the data directory
         data_dir_path: Path = get_user_data_path()
@@ -650,7 +645,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         self._setup()
 
-        self._prepare_interpolators(log_interp=False, data_frame=template_file.grid)
+        self._prepare_interpolators(log_interp=True, data_frame=template_file.grid)
         # clean things up a bit
 
         # Setup cache to avoid unnecessary computations
@@ -701,84 +696,86 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         )
         parameter_grid_values: list[float] = list(self._parameters_grids.values())
         parameter_values_len: int = len(parameter_grid_values)
-        degree_of_interpolation: int = self._degree_of_interpolation
-        spline_smoothing_factor: int = self._spline_smoothing_factor
 
         # interpolate over the parameters
         self._interpolators: list[RectBivariateSpline | GridInterpolate] = []
-        interpolators = self._interpolators
-        self._is_log10: bool = log_interp
-        energy_values: ndarray = self._E
-        lon_vals: ndarray = self._L
-        lat_vals: ndarray = self._B
 
-        for i, _ in enumerate(energy_values):
-            for j, _ in enumerate(lon_vals):
-                for k, _ in enumerate(lat_vals):
-                    reshaped_data = np.array(
-                        data_frame[..., i, j, k].reshape(*para_shape), dtype=float
-                    )
-                    this_data = np.log10(reshaped_data) if log_interp else reshaped_data
+        this_interpolator: Optional[
+            UnivariateSpline | RectBivariateSpline | GridInterpolate
+        ] = None
 
-                    if parameter_values_len == 1:
-                        xpoints = np.array(
-                            [
-                                parameter_grid_values[x]
-                                for x in range(parameter_values_len)
-                            ][0]
-                        )
-                        ypoints = np.array(
-                            [this_data[x] for x in range(this_data.shape[0])]
-                        )
+        indices = product(
+            range(self._E.shape[0]),
+            range(self._L.shape[0]),
+            range(self._B.shape[0]),
+        )
 
-                        this_interpolator: UnivariateSpline = UnivariateSpline(
-                            xpoints, ypoints
-                        )
+        # for i, _ in enumerate(energy_values):
+        #     for j, _ in enumerate(lon_vals):
+        #         for k, _ in enumerate(lat_vals):
+        for i, j, k in tqdm(indices, desc="Preparing interpolators"):
+            reshaped_data = np.array(
+                data_frame[..., i, j, k].reshape(*para_shape), dtype=float
+            )
+            if log_interp:
+                this_data = np.log10(reshaped_data)
+                self._is_log10 = True
+            else:
+                self._is_log10 = False
+                this_data = reshaped_data
 
-                    elif parameter_grid_values == 2:
-                        x, y = parameter_grid_values
+            if parameter_values_len == 1:
+                xpoints = np.array(
+                    [parameter_grid_values[x] for x in range(parameter_values_len)][0]
+                )
+                ypoints = np.array([this_data[x] for x in range(this_data.shape[0])])
 
-                        # Make sure that the requested polynomial degree is
-                        # less thant the number of data sets in
-                        # both directions
+                this_interpolator = UnivariateSpline(xpoints, ypoints)
 
-                        if len(x) <= degree_of_interpolation:
-                            log.error(self._msg(degree_of_interpolation, "x"))
+            elif parameter_values_len == 2:
+                x, y = list(self._parameters_grids.values())
 
-                            raise RuntimeError()
+                # Make sure that the requested polynomial degree is
+                # less thant the number of data sets in
+                # both directions
 
-                        if len(y) <= degree_of_interpolation:
-                            log.error(self._msg(degree_of_interpolation, "y"))
+                if len(x) <= self._degree_of_interpolation:
+                    log.error(self._msg(self._degree_of_interpolation, "x"))
 
-                            raise RuntimeError()
+                    raise RuntimeError()
 
-                        this_interpolator: RectBivariateSpline = (
-                            RectBivariateSplineWrapper(
-                                x,
-                                y,
-                                this_data,
-                                kx=degree_of_interpolation,
-                                ky=degree_of_interpolation,
-                                s=spline_smoothing_factor,
-                            )
-                        )
+                if len(y) <= self._degree_of_interpolation:
+                    log.error(self._msg(self._degree_of_interpolation, "y"))
 
-                    else:
-                        # In more than 2d, we can only interpolate linearly
-                        this_interpolator: GridInterpolate = GridInterpolate(
-                            tuple([np.array(x) for x in parameter_grid_values]),
-                            this_data,
-                        )
+                    raise RuntimeError()
 
-                    # self._interpolators.append(this_interpolator)
-                    interpolators.append(this_interpolator)
-        self._interpolators = interpolators
+                this_interpolator = RectBivariateSplineWrapper(  # type: ignore
+                    x,
+                    y,
+                    this_data,
+                    kx=self._degree_of_interpolation,
+                    ky=self._degree_of_interpolation,
+                    s=self._spline_smoothing_factor,
+                )
+
+            else:
+                # In more than 2d, we can only interpolate linearly
+                this_interpolator = GridInterpolate(
+                    tuple([np.array(x) for x in self._parameter_grid_values]),
+                    this_data,
+                )
+
+            self._interpolators.append(this_interpolator)
 
         del data_frame
         gc.collect()
 
     def _interpolate(
-        self, energies: ndarray, lons: ndarray, lats: ndarray, parameter_values: ndarray
+        self,
+        energies: ndarray,
+        lons: ndarray,
+        lats: ndarray,
+        parameter_values: tuple[float, ...],
     ) -> ndarray:
         """Evaluates the morphology parameters and generates interpolated map
         that is then used for the interpolation over energy RA, Dec and energy
@@ -796,26 +793,40 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         :rtype: NDArray[np.float64]
         """
 
-        key = tuple(round(par, 5) for par in parameter_values)
-        if self._cached_values.get(key) is not None:
-            return self._cached_values[key]
+        if isinstance(energies, u.Quantity):
+            energies = np.array(
+                energies.to("keV").value, ndmin=1, copy=False, dtype=float
+            )
 
-        # gather all interpolations for these parameters' values
-        interpolated_map: ndarray = np.array(
-            [
-                interpolator(np.atleast_1d(parameter_values))
-                for interpolator in self._interpolators
-            ],
-        )
+        # transform energy from keV to MeV (galprop likes MeV, 3ML likes keV)
+        log_energies = np.log10(energies * (1.0 * u.keV).to(u.MeV).value)
 
-        # map_shape = [x.shape[0] for x in list(self._map_grids.values())]
+        if self._cached_values.get(parameter_values) is not None:
+            self._log_interpolated_map = self._cached_values[parameter_values]
+
+        else:
+            # gather all interpolations for these parameters' values
+            self._log_interpolated_map = np.array(
+                [
+                    self._interpolators[i](np.atleast_1d(parameter_values))  # type: ignore
+                    for i in range(len(self._interpolators))
+                ]
+            )
+
+            self._cached_values[parameter_values] = self._log_interpolated_map
+
+        # limit the size of the cache to 30 values and pop the oldest entries
+        # inserted valued (follows the FIFO approach)
+        if len(self._cached_values) > 30:
+            while len(self._cached_values) > 20:
+                self._cached_values.popitem(last=False)
+
         map_shape = [x.shape[0] for x in [self._E, self._L, self._B]]
 
-        interpolator = RegularGridInterpolator(
+        self._interpolator = RegularGridInterpolator(
             (self._E, self._L, self._B),
-            interpolated_map.reshape(*map_shape),
+            self._log_interpolated_map.reshape(*map_shape),
             bounds_error=False,
-            fill_value=0.0,
         )
 
         if lons.size != lats.size:
@@ -827,48 +838,39 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         f_interpolated = np.zeros([lons.size, energies.size])
 
         # # evaluate the interpolators over energy, ra, and dec
-        log_interp = self._is_log10
-        for i, e in enumerate(energies):
-            engs: ndarray = np.repeat(e, lats.size)
+        for i, e in enumerate(log_energies):
+            engs: ndarray = np.repeat(e, lats.shape[0])
 
-            # slice_points = tuple((engs, lats, lons))
+            interpolated_slice = self._interpolator((engs, lons, lats))
 
-            if log_interp:
-                # NOTE: if interpolation is carried using the log10 scale,
-                # ensure that values outside range of interpolation remain
-                # zero after conversion to linear scale.
-                # because if function returns zero, 10**(0) = 1.
-                # This affects the fit in 3ML and breaks things.
+            # clean up the data
+            bad_idx = np.isnan(interpolated_slice)
+            interpolated_slice[bad_idx] = 0
+            bad_idx = np.isinf(interpolated_slice)
+            interpolated_slice[bad_idx] = 0
 
-                log_interpolated_slice = interpolator((engs, lons, lats))
+            if self._is_log10:
+                # f_interpolated[:,i] = np.power(10.0, f_interpolated[:,i])
+                #     # NOTE: if interpolation is carried using the log10 scale,
+                #     # ensure that values outside range of interpolation remain
+                #     # zero after conversion to linear scale.
+                #     # because if function returns zero, 10**(0) = 1.
+                #     # This affects the fit in 3ML and breaks things.
 
-                interpolated_slice = np.array(
-                    [
-                        0.0 if x == 0.0 else np.power(10.0, x)
-                        for x in log_interpolated_slice
-                    ]
+                log_interpolated_slice = np.array(
+                    [0.0 if x == 0.0 else np.power(10.0, x) for x in interpolated_slice]
                 )
+                f_interpolated[:, i] = log_interpolated_slice
 
             else:
-                # interpolated_slice = interpolator(tuple([engs, lons, lats]))
-                interpolated_slice = interpolator((engs, lons, lats))
-
-            f_interpolated[:, i] = interpolated_slice
+                f_interpolated[:, i] = interpolated_slice
 
         assert np.all(np.isfinite(f_interpolated)), "some values are wrong!"
-
-        self._cached_values[key] = f_interpolated
-
-        # limit the size of the cache to 30 values and pop the oldest entries
-        # inserted valued (follows the FIFO approach)
-        if len(self._cached_values) > 30:
-            while len(self._cached_values) > 20:
-                self._cached_values.popitem(last=False)
 
         return f_interpolated
 
     def _setup(self):
-        self._frame = "ICRS"  # ICRS()
+        self._frame = "icrs"  # ICRS()
 
     def clean(self) -> None:
         """
@@ -896,23 +898,22 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         # keep this units to if templates have been normalized
         self.K.unit = 1 / (u.sr)  # type: ignore
 
-    def evaluate(self, x, y, z, K, lon0, lat0, *args) -> ndarray:
+    def evaluate(self, x, y, z, K, lon0, lat0, *args):
         lons = x
         lats = y
         energies = z
 
-        angsep = angular_distance_fast(lon0, lat0, lons, lats)
+        # angsep = angular_distance_fast(lon0, lat0, lons, lats)
 
         # if only one energy is passed, make sure we can iterate just once
         if not isinstance(energies, np.ndarray):
             energies = np.array(energies)
 
-        # transform energy from keV to MeV
-        # galprop likes MeV, 3ML likes keV
-        log_energies = np.log10(energies) - np.log10((u.MeV.to("keV") / u.keV).value)
+        interpolated_image = self._interpolate(energies, lons, lats, args)
 
         # if templates are normalized no need to convert back
-        return np.multiply(K, self._interpolate(log_energies, lons, lats, args))  # type:
+        # return np.multiply(K, self._interpolate(log_energies, lons, lats, args))  # type: ignore
+        return np.multiply(K, interpolated_image)  # type: ignore
 
     # def set_frame(self, new_frame):
     # """
