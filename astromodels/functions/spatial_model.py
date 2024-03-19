@@ -20,7 +20,6 @@ from interpolation import interp
 from interpolation.splines import eval_linear
 from numpy.typing import NDArray
 from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator
-from tqdm import tqdm
 
 from astromodels.core.parameter import Parameter
 from astromodels.functions.function import Function3D, FunctionMeta
@@ -713,7 +712,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         # for i, _ in enumerate(energy_values):
         #     for j, _ in enumerate(lon_vals):
         #         for k, _ in enumerate(lat_vals):
-        for i, j, k in tqdm(indices, desc="Preparing interpolators"):
+        for i, j, k in indices:
             reshaped_data = np.array(
                 data_frame[..., i, j, k].reshape(*para_shape), dtype=float
             )
