@@ -8,7 +8,7 @@ from builtins import range, str
 from dataclasses import dataclass
 from itertools import product
 from pathlib import Path
-from typing import Optional, OrderedDict, TypeAlias
+from typing import Optional, OrderedDict, Sequence, TypeAlias
 
 import astropy.units as u
 import h5py
@@ -717,11 +717,12 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
                 data_frame[..., i, j, k].reshape(*para_shape), dtype=float
             )
             if log_interp:
-                this_data = np.log10(reshaped_data)
+                reshaped_data = np.log10(reshaped_data)
                 self._is_log10 = True
             else:
                 self._is_log10 = False
-                this_data = reshaped_data
+
+            this_data = reshaped_data
 
             if parameter_values_len == 1:
                 xpoints = np.array(
@@ -760,7 +761,9 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
             else:
                 # In more than 2d, we can only interpolate linearly
                 this_interpolator = GridInterpolate(
-                    tuple([np.array(x) for x in self._parameter_grid_values]),
+                    tuple(
+                        [np.array(x, dtype="<f8") for x in self._parameter_grid_values]
+                    ),
                     this_data,
                 )
 
@@ -801,23 +804,22 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         log_energies = np.log10(energies * (1.0 * u.keV).to(u.MeV).value)
 
         if self._cached_values.get(parameter_values) is not None:
-            self._log_interpolated_map = self._cached_values[parameter_values]
+            # self._log_interpolated_map = self._cached_values[parameter_values]
+            return self._cached_values[parameter_values]
 
-        else:
-            # gather all interpolations for these parameters' values
-            self._log_interpolated_map = np.array(
-                [
-                    self._interpolators[i](np.atleast_1d(parameter_values))  # type: ignore
-                    for i in range(len(self._interpolators))
-                ]
+        evaluated_map: Sequence = list(
+            map(
+                lambda interpolator: interpolator(np.atleast_1d(parameter_values)),
+                self._interpolators,
             )
+        )
 
-            self._cached_values[parameter_values] = self._log_interpolated_map
+        self._log_interpolated_map = np.array(evaluated_map, dtype="<f8")
 
         # limit the size of the cache to 30 values and pop the oldest entries
         # inserted valued (follows the FIFO approach)
         if len(self._cached_values) > 30:
-            while len(self._cached_values) > 20:
+            while len(self._cached_values) > 10:
                 self._cached_values.popitem(last=False)
 
         map_shape = [x.shape[0] for x in [self._E, self._L, self._B]]
@@ -849,7 +851,6 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
             interpolated_slice[bad_idx] = 0
 
             if self._is_log10:
-                # f_interpolated[:,i] = np.power(10.0, f_interpolated[:,i])
                 #     # NOTE: if interpolation is carried using the log10 scale,
                 #     # ensure that values outside range of interpolation remain
                 #     # zero after conversion to linear scale.
@@ -865,6 +866,8 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
                 f_interpolated[:, i] = interpolated_slice
 
         assert np.all(np.isfinite(f_interpolated)), "some values are wrong!"
+
+        self._cached_values[parameter_values] = f_interpolated
 
         return f_interpolated
 
@@ -893,9 +896,9 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         self.lon0.unit = x_unit  # type: ignore
         self.lat0.unit = y_unit  # type: ignore
 
-        # self.K.unit = 1/(u.MeV * u.cm**2 * u.s * u.sr)
+        self.K.unit = 1 / (u.MeV * u.cm**2 * u.s * u.sr)
         # keep this units to if templates have been normalized
-        self.K.unit = 1 / (u.sr)  # type: ignore
+        # self.K.unit = 1 / (u.sr)  # type: ignore
 
     def evaluate(self, x, y, z, K, lon0, lat0, *args):
         lons = x
@@ -912,7 +915,9 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         # if templates are normalized no need to convert back
         # return np.multiply(K, self._interpolate(log_energies, lons, lats, args))  # type: ignore
-        return np.multiply(K, interpolated_image)  # type: ignore
+        # return np.multiply(K, interpolated_image/1000)  # type: ignore
+        # to go from MeV to keV
+        return np.multiply(K, interpolated_image / 1000)
 
     # def set_frame(self, new_frame):
     # """
