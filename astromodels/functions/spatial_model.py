@@ -114,16 +114,11 @@ class ModelFactory:
         parameters are used for interpolation in the class HaloModel
 
         :param name: Name of output HDF5 file
-        :type name: str
         :param description: A brief summary of the template model for reference
-        :type description: str
         :param names_of_parameters: unique name for parameters to interpolate over
-        :type names_of_parameters: list[str]
         :param degree_of_interpolation: Polynomial degree for interpolating, defaults to 1
-        :type degree_of_interpolation: int, optional
         :param spline_smoothing_factor: Smoothing factor used during spline interpolation,
         defaults to 0
-        :type spline_smoothing_factor: int, optional
         :raises RuntimeError: Raised if name of the file cannot contain spaces or
         special characters.
         """
@@ -176,7 +171,6 @@ class ModelFactory:
         :param grid: Array of allowed values for the paremter
         :raises AssertionError: Check that the parameter is part of the model
         :raises AssertionError: Ensure all parameter values in the grid are non-repeating
-        :return: none
         """
 
         if parameter_name not in self._parameters_grids:
@@ -209,9 +203,7 @@ class ModelFactory:
         """Fill data table with information from 3D mapcube templates.
 
         :param fits_file: FITS file with 3D mapcube
-        :type fits_file: Path
         :param ihdu: Path to primary HDU, defaults to 0
-        :type ihdu: int, optional
         :raises IncompleteGrid: Check if the grid is not filled with strange values
         :raises RuntimeError: Checks that a FITS file was provided
         :raises AssertionError: Ensure we have the right number of parameters as
@@ -330,11 +322,9 @@ class ModelFactory:
         """Save the table into a file for later usage with SpatialModel.
 
         :param overwrite: Allows the overwriting of an already existing file, defaults to False
-        :type overwrite: bool, optional
         :raises AssertionError: Raised if there are any strange values within the table
         :raises IOError: Raised if the filed exists and deleting it not permitted
         :raises IOError: Raised if the filed exists and overriting it is not enabled
-        :return: none
         """
 
         # First make sure that the whole data matrix has been filled
@@ -403,9 +393,7 @@ def add_method(self, method, name=None) -> None:
     """Add a method to a class at run time
 
     :param method: function to add to the class
-    :type method: Callable[Any, Any]
     :param name: method name, defaults to None
-    :type name: str, optional
     """
     if name is None:
         name = method.func_name
@@ -451,7 +439,6 @@ class TemplateFile:
         """Serialize the contents to a file and save it
 
         :param file_name: Path of output file
-        :type file_name: str
         :return: none
         """
 
@@ -479,9 +466,7 @@ class TemplateFile:
         """Read the contents from a template file
 
         :param file_name: Path to the file
-        :type file_name: str
         :return: TemplateFile holding the data from the file
-        :rtype: TemplateFile
         """
         with h5py.File(file_name, "r") as f:
             name: str = f.attrs["name"]  # type: ignore
@@ -676,15 +661,11 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         over morphology parameters declared in ModelFactory's parameter grid
 
         :param log_interp: interpolation carried on log scale
-        :type log_interp: bool
         :param data_frame: Data table with information from template grid
-        :type data_frame: NDArray[np.float64]
         :raises RuntimeError: Raised if degree of interpolation for x is not at
         least > 1 than number of parameters in x direction
-        :raises RuntimeError: Raised if degree of interpolation for y is not at
         least > 1 than number of parameters in y direction
         :return: none
-        :rtype: None
         """
 
         log.info("Preparing the interpolators...")
@@ -783,16 +764,11 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         that is then used for the interpolation over energy RA, Dec and energy
 
         :param energies: Energy values
-        :type energies: np.ndarray
         :param lons: Longitudes within the extended source boundaries
-        :type lons: np.ndarray
         :param lats: Latitutdes within the extended source boundaries
-        :type lats: np.ndarray
         :param parameter_values: User provided morphology parameters defined in ModelFactory
-        :type parameter_values: np.ndarray
         :raises AttributeError: Longitudes and latitudes do not have the same dimensions
         :return: Map of interpolated values over energies, longitudes, and latitudes
-        :rtype: NDArray[np.float64]
         """
 
         if isinstance(energies, u.Quantity):
@@ -879,7 +855,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         Table models can consume a lof of memory.
         This method calls a clean method and removes some of the memory
         consumed by the models.
-        :returns:
+        :returns: none
         """
         self._interpolators = None  # type: ignore
         del self._interpolators
@@ -949,31 +925,29 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         return data
 
     # Define the region within the template ROI
-    # TODO: set as pending to implement in the add_interpolation method later
     def define_region(
-        self, a: float, b: float, c: float, d: float, galactic: bool = False
+        self,
+        xcoord_start: float,
+        xcoord_end: float,
+        ycoord_start: float,
+        ycoord_end: float,
+        galactic: bool = False,
     ) -> tuple[float, float, float, float]:
         """Defined boundaries of template
 
-        :param a: Minimum longitude (RA)
-        :type a: float
-        :param b: Maximum longitude (RA)
-        :type b: float
-        :param c: Minimum latitute (Dec)
-        :type c: float
-        :param d: Maximum latitue (Dec)
-        :type d: float
+        :param xcoord_start: Minimum longitude (RA)
+        :param xcoord_end: Maximum longitude (RA)
+        :param ycoord_start: Minimum latitute (Dec)
+        :param ycoord_end: Maximum latitue (Dec)
         :param galactic: Determine whether coordinates are galactic, defaults to False
-        :type galactic: bool, optional
-        :return: Returns the coordinates of the boundaries of the template
-        :rtype: tuple[float, float, float, float]
+        :return: coordinates of the boundaries of the template
         """
 
         if galactic:
-            lmin: float = a
-            lmax: float = b
-            bmin: float = c
-            bmax: float = d
+            lmin: float = xcoord_start
+            lmax: float = xcoord_end
+            bmin: float = ycoord_start
+            bmax: float = ycoord_end
 
             _coord = SkyCoord(
                 l=[lmin, lmin, lmax, lmax], b=[bmin, bmax, bmax, bmin], frame="galactic"
@@ -985,14 +959,19 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
             self.decmax: float = max(_coord.transform_to(self.frame.value).dec.value)  # type: ignore
 
         else:
-            self.ramin = a
-            self.ramax = b
-            self.decmin = c
-            self.decmax = d
+            self.ramin = xcoord_start
+            self.ramax = xcoord_end
+            self.decmin = ycoord_start
+            self.decmax = ycoord_end
 
         return self.ramin, self.ramax, self.decmin, self.decmax
 
     def get_boundaries(self) -> tuple[tuple[float, float], tuple[float, float]]:
+        """Get the boundaries of the template
+
+        :return: Boundaries of template for (min longitude, max longtiude),
+        (min latitude, max latitude)
+        """
         min_longitude: float = self.ramin
         max_longitude: float = self.ramax
         min_latitude: float = self.decmin
