@@ -629,7 +629,9 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         self._setup()
 
-        self._prepare_interpolators(log_interp=True, data_frame=template_file.grid)
+        self._data_frame = template_file.grid
+
+        # self._prepare_interpolators(log_interp=True, data_frame=template_file.grid)
         # clean things up a bit
 
         # Setup cache to avoid unnecessary computations
@@ -771,6 +773,9 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         :return: Map of interpolated values over energies, longitudes, and latitudes
         """
 
+        if not hasattr(self, "_interpolators"):
+            self._prepare_interpolators(log_interp=True, data_frame=self._data_frame)
+
         if isinstance(energies, u.Quantity):
             energies = np.array(
                 energies.to("keV").value, ndmin=1, copy=False, dtype=float
@@ -827,11 +832,11 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
             interpolated_slice[bad_idx] = 0
 
             if self._is_log10:
-                #     # NOTE: if interpolation is carried using the log10 scale,
-                #     # ensure that values outside range of interpolation remain
-                #     # zero after conversion to linear scale.
-                #     # because if function returns zero, 10**(0) = 1.
-                #     # This affects the fit in 3ML and breaks things.
+                # NOTE: if interpolation is carried using the log10 scale,
+                # ensure that values outside range of interpolation remain
+                # zero after conversion to linear scale.
+                # because if function returns zero, 10**(0) = 1.
+                # This affects the fit in 3ML and breaks things.
 
                 log_interpolated_slice = np.array(
                     [0.0 if x == 0.0 else np.power(10.0, x) for x in interpolated_slice]
