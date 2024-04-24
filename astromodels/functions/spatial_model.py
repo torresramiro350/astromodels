@@ -1,4 +1,5 @@
-"""Template fitting of 3D energy dependent model """
+"""Template fitting of 3D energy dependent model"""
+
 import collections
 import gc
 import hashlib
@@ -8,7 +9,7 @@ from builtins import range, str
 from dataclasses import dataclass
 from itertools import product
 from pathlib import Path
-from typing import Optional, OrderedDict, Sequence, TypeAlias
+from typing import List, Optional, OrderedDict, Sequence, TypeAlias
 
 import astropy.units as u
 import h5py
@@ -105,7 +106,7 @@ class ModelFactory:
         self,
         name: str,
         description: str,
-        names_of_parameters: list[str],
+        names_of_parameters: List[str],
         degree_of_interpolation: int = 1,
         spline_smoothing_factor: int = 0,
     ) -> None:
@@ -121,6 +122,29 @@ class ModelFactory:
         defaults to 0
         :raises RuntimeError: Raised if name of the file cannot contain spaces or
         special characters.
+        Example:
+        >>> model_factory = ModelFactory(
+        ...     "my_model",
+        ...     "A brief summary of the model",
+        ...     ["param1", "param2"],
+        ...     degree_of_interpolation=1,
+        ...     spline_smoothing_factor=0,
+        ... )
+        >>> model_factory.define_parameter_grid(
+        ...     "param1", np.linspace(0, 10, 100)
+        ... )
+        >>> model_factory.define_parameter_grid(
+        ...     "param2", np.linspace(0, 10, 100)
+        ... )
+        >>> for i, val1 in enumerate(model_factory._parameters_grids["param1"]):
+        >>>     for j, val2 in enumerate(model_factory._parameters_grids["param2"]):
+        >>>         model_factory.add_interpolation_data(fits_file="template.fits",
+        ...                                             param1=val1,
+        ...                                             param2=val2)
+        >>> # Save the data to a file.
+        ... # If the data file already exists, it won't overwrite
+        ... # the current file until overwrite is set to overwrite = True
+        >>> model_factory.save_data()
         """
 
         self._data_frame: Optional[ndarray] = None
@@ -159,10 +183,10 @@ class ModelFactory:
         self._spline_smoothing_factor = int(spline_smoothing_factor)
 
         # Create a dictionary which will contain the grid for each parameter
-        self._parameters_grids = collections.OrderedDict()
+        self._parameters_grids: OrderedDict[str, ndarray] = collections.OrderedDict()
 
         for parameter_name in names_of_parameters:
-            self._parameters_grids[parameter_name] = None
+            self._parameters_grids[parameter_name] = None  # type: ignore
 
     def define_parameter_grid(self, parameter_name: str, grid: ndarray) -> None:
         """Defines the user provider parameter grid for a given parameter with its associated name
@@ -282,13 +306,10 @@ class ModelFactory:
             shape = [len(v) for k, v in self._parameters_grids.items()]
 
             shape.extend([self._E.shape[0], self._L.shape[0], self._B.shape[0]])
-            # shape.append(self._E.shape[0])
-            # shape.append(self._L.shape[0])
-            # shape.append(self._B.shape[0])
 
             log.debug(f"grid shape: {shape}")
 
-            self._data_frame: ndarray = np.zeros(tuple(shape))
+            self._data_frame = np.zeros(tuple(shape))
 
             log.debug(f"grid shape actual: {self._data_frame.shape}")
 
@@ -431,7 +452,7 @@ class TemplateFile:
     lats: ndarray
     lons: ndarray
     parameters: OrderedDict[str, ndarray]
-    parameter_order: list[str]
+    parameter_order: List[str]
     degree_of_interpolation: int
     spline_smoothing_factor: int
 
@@ -474,7 +495,7 @@ class TemplateFile:
             degree_of_interpolation: int = f.attrs["degree_of_interpolation"]  # type: ignore
             spline_smoothing_factor: int = f.attrs["spline_smoothing_factor"]  # type: ignore
 
-            parameter_order: list[str] = f["parameter_order"][()]  # type: ignore
+            parameter_order: List[str] = f["parameter_order"][()]  # type: ignore
             energies: ndarray = f["energies"][()]  # type: ignore
             lats: ndarray = f["lats"][()]  # type: ignore
             lons: ndarray = f["lons"][()]  # type: ignore
@@ -532,11 +553,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
             max: 90.0
     """
 
-    def _custom_init_(
-        self,
-        model_name,
-        other_name=None,
-    ) -> None:
+    def _custom_init_(self, model_name: str, other_name: str | None = None) -> None:
         """
         Custom initialization for this model
         :param model_name: the name of the model, corresponding to the
@@ -600,12 +617,14 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         self._spline_smoothing_factor = template_file.spline_smoothing_factor
 
         # Make the dictionary of parameters for the model
-        function_definition = collections.OrderedDict()
+        function_definition: collections.OrderedDict[
+            str, str
+        ] = collections.OrderedDict()
         function_definition["description"] = description
         function_definition["latex"] = "n.a."
 
         # Now build the parameters according to the content of the parameter grid
-        parameters = collections.OrderedDict()
+        parameters: collections.OrderedDict[str, Parameter] = collections.OrderedDict()
 
         parameters["K"] = Parameter("K", 1.0)
         parameters["lon0"] = Parameter("lon0", 0.0, min_value=0.0, max_value=360.0)
@@ -676,25 +695,20 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         para_shape = np.array(
             [x.shape[0] for x in list(self._parameters_grids.values())]
         )
-        parameter_grid_values: list[float] = list(self._parameters_grids.values())
+        parameter_grid_values: List[float] = list(self._parameters_grids.values())
         parameter_values_len: int = len(parameter_grid_values)
 
         # interpolate over the parameters
-        self._interpolators: list[RectBivariateSpline | GridInterpolate] = []
+        self._interpolators: List[RectBivariateSpline | GridInterpolate] = []
 
         this_interpolator: Optional[
             UnivariateSpline | RectBivariateSpline | GridInterpolate
         ] = None
 
         indices = product(
-            range(self._E.shape[0]),
-            range(self._L.shape[0]),
-            range(self._B.shape[0]),
+            range(self._E.shape[0]), range(self._L.shape[0]), range(self._B.shape[0])
         )
 
-        # for i, _ in enumerate(energy_values):
-        #     for j, _ in enumerate(lon_vals):
-        #         for k, _ in enumerate(lat_vals):
         for i, j, k in indices:
             reshaped_data = np.array(
                 data_frame[..., i, j, k].reshape(*para_shape), dtype=float
@@ -774,7 +788,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         """
 
         if not hasattr(self, "_interpolators"):
-            self._prepare_interpolators(log_interp=True, data_frame=self._data_frame)
+            self._prepare_interpolators(log_interp=False, data_frame=self._data_frame)
 
         if isinstance(energies, u.Quantity):
             energies = np.array(
@@ -877,9 +891,9 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         self.lon0.unit = x_unit  # type: ignore
         self.lat0.unit = y_unit  # type: ignore
 
-        self.K.unit = 1 / (u.MeV * u.cm**2 * u.s * u.sr)
+        # self.K.unit = 1 / (u.MeV * u.cm**2 * u.s * u.sr)
         # keep this units to if templates have been normalized
-        # self.K.unit = 1 / (u.sr)  # type: ignore
+        self.K.unit = 1 / (u.sr)  # type: ignore
 
     def evaluate(self, x, y, z, K, lon0, lat0, *args):
         lons = x
@@ -894,11 +908,12 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         interpolated_image = self._interpolate(energies, lons, lats, args)
 
-        # if templates are normalized no need to convert back
         # return np.multiply(K, self._interpolate(log_energies, lons, lats, args))  # type: ignore
         # return np.multiply(K, interpolated_image/1000)  # type: ignore
         # to go from MeV to keV
-        return np.multiply(K, interpolated_image / 1000)
+        # return np.multiply(K, interpolated_image / 1000)
+        # if templates are normalized no need to convert back
+        return np.multiply(K, interpolated_image)  # type: ignore
 
     # def set_frame(self, new_frame):
     # """
