@@ -26,7 +26,6 @@ from astromodels.core.parameter import Parameter
 from astromodels.functions.function import Function3D, FunctionMeta
 from astromodels.utils import get_user_data_path
 from astromodels.utils.logging import setup_logger
-from astromodels.utils.logging import setup_logger
 
 ndarray: TypeAlias = NDArray[np.float64]
 
