@@ -1,4 +1,5 @@
-"""Template fitting of 3D energy dependent model """
+"""Template fitting of 3D energy dependent model"""
+
 import collections
 import gc
 import hashlib
@@ -14,17 +15,16 @@ import astropy.units as u
 import h5py
 import numpy as np
 import scipy.interpolate
+from astromodels.core.parameter import Parameter
+from astromodels.functions.function import Function3D, FunctionMeta
+from astromodels.utils import get_user_data_path
+from astromodels.utils.logging import setup_logger
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
 from interpolation import interp
 from interpolation.splines import eval_linear
 from numpy.typing import NDArray
 from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator
-
-from astromodels.core.parameter import Parameter
-from astromodels.functions.function import Function3D, FunctionMeta
-from astromodels.utils import get_user_data_path
-from astromodels.utils.logging import setup_logger
 
 ndarray: TypeAlias = NDArray[np.float64]
 
@@ -121,6 +121,30 @@ class ModelFactory:
         defaults to 0
         :raises RuntimeError: Raised if name of the file cannot contain spaces or
         special characters.
+
+        Example:
+        >>> model_factory = ModelFactory(
+        ...     "my_model",
+        ...     "A brief summary of the model",
+        ...     ["param1", "param2"],
+        ...     degree_of_interpolation=1,
+        ...     spline_smoothing_factor=0,
+        ... )
+        >>> model_factory.define_parameter_grid(
+        ...     "param1", np.linspace(0, 10, 100)
+        ... )
+        >>> model_factory.define_parameter_grid(
+        ...     "param2", np.linspace(0, 10, 100)
+        ... )
+        >>> for i, val1 in enumerate(model_factory._parameters_grids["param1"]):
+        >>>     for j, val2 in enumerate(model_factory._parameters_grids["param2"]):
+        >>>         model_factory.add_interpolation_data(fits_file="template.fits",
+        ...                                             param1=val1,
+        ...                                             param2=val2)
+        >>> # Save the data to a file.
+        >>> # If the data file already exists, it won't overwrite it until you set
+        ... # overwrite = True
+        >>> model_factory.save_data()
         """
 
         self._data_frame: Optional[ndarray] = None
@@ -288,7 +312,7 @@ class ModelFactory:
 
             log.debug(f"grid shape: {shape}")
 
-            self._data_frame: ndarray = np.zeros(tuple(shape))
+            self._data_frame = np.zeros(tuple(shape))
 
             log.debug(f"grid shape actual: {self._data_frame.shape}")
 
@@ -532,11 +556,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
             max: 90.0
     """
 
-    def _custom_init_(
-        self,
-        model_name,
-        other_name=None,
-    ) -> None:
+    def _custom_init_(self, model_name, other_name=None) -> None:
         """
         Custom initialization for this model
         :param model_name: the name of the model, corresponding to the
@@ -635,9 +655,9 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         # clean things up a bit
 
         # Setup cache to avoid unnecessary computations
-        self._cached_values: OrderedDict[
-            tuple[float, ...], ndarray
-        ] = collections.OrderedDict()
+        self._cached_values: OrderedDict[tuple[float, ...], ndarray] = (
+            collections.OrderedDict()
+        )
 
         del template_file
 
@@ -687,9 +707,7 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         ] = None
 
         indices = product(
-            range(self._E.shape[0]),
-            range(self._L.shape[0]),
-            range(self._B.shape[0]),
+            range(self._E.shape[0]), range(self._L.shape[0]), range(self._B.shape[0])
         )
 
         # for i, _ in enumerate(energy_values):
@@ -877,9 +895,9 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
         self.lon0.unit = x_unit  # type: ignore
         self.lat0.unit = y_unit  # type: ignore
 
-        self.K.unit = 1 / (u.MeV * u.cm**2 * u.s * u.sr)
+        # self.K.unit = 1 / (u.MeV * u.cm**2 * u.s * u.sr)
         # keep this units to if templates have been normalized
-        # self.K.unit = 1 / (u.sr)  # type: ignore
+        self.K.unit = 1 / (u.sr)  # type: ignore
 
     def evaluate(self, x, y, z, K, lon0, lat0, *args):
         lons = x
@@ -894,11 +912,11 @@ class HaloModel(Function3D, metaclass=FunctionMeta):
 
         interpolated_image = self._interpolate(energies, lons, lats, args)
 
-        # if templates are normalized no need to convert back
-        # return np.multiply(K, self._interpolate(log_energies, lons, lats, args))  # type: ignore
-        # return np.multiply(K, interpolated_image/1000)  # type: ignore
         # to go from MeV to keV
-        return np.multiply(K, interpolated_image / 1000)
+        # return np.multiply(K, interpolated_image / 1000)
+
+        # if templates are normalized no need to convert back
+        return np.multiply(K, interpolated_image)  # type: ignore
 
     # def set_frame(self, new_frame):
     # """
