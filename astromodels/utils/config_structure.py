@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass, field
-from enum import IntEnum, Enum
+from enum import Enum, IntEnum
 
 
 # logging
@@ -57,8 +57,8 @@ class Modeling:
 
 @dataclass
 class Config:
-    logging: Logging = field(default_factory=Logging)
+    logging: Logging = field(default_factory=lambda: Logging)
     absorption_models: AbsorptionModels = field(
-        default_factory=AbsorptionModels
+        default_factory=lambda: AbsorptionModels
     )
-    modeling: Modeling = field(default_factory=Modeling)
+    modeling: Modeling = field(default_factory=lambda: Modeling)
