@@ -53,7 +53,6 @@ class Latitude_galactic_diffuse(Function2D, metaclass=FunctionMeta):
     # constructor provided by the meta class
 
     def _setup(self):
-
         self._frame = ICRS()
 
     def set_frame(self, new_frame):
@@ -68,14 +67,12 @@ class Latitude_galactic_diffuse(Function2D, metaclass=FunctionMeta):
         self._frame = new_frame
 
     def _set_units(self, x_unit, y_unit, z_unit):
-
         self.K.unit = z_unit
         self.sigma_b.unit = x_unit
         self.l_min.unit = y_unit
         self.l_max.unit = y_unit
 
     def evaluate(self, x, y, K, sigma_b, l_min, l_max):
-
         # We assume x and y are R.A. and Dec
         _coord = SkyCoord(ra=x, dec=y, frame=self._frame, unit="deg")
 
@@ -92,7 +89,6 @@ class Latitude_galactic_diffuse(Function2D, metaclass=FunctionMeta):
         )
 
     def get_boundaries(self):
-
         max_b = self.sigma_b.max_value
         l_min = self.l_min.value
         l_max = self.l_max.value
@@ -169,7 +165,6 @@ class Gaussian_on_sphere(Function2D, metaclass=FunctionMeta):
     """
 
     def _set_units(self, x_unit, y_unit, z_unit):
-
         # lon0 and lat0 and rdiff have most probably all units of degrees. However,
         # let's set them up here just to save for the possibility of using the
         # formula with other units (although it is probably never going to happen)
@@ -179,7 +174,6 @@ class Gaussian_on_sphere(Function2D, metaclass=FunctionMeta):
         self.sigma.unit = x_unit
 
     def evaluate(self, x, y, lon0, lat0, sigma):
-
         lon, lat = x, y
 
         angsep = angular_distance(lon0, lat0, lon, lat)
@@ -194,7 +188,6 @@ class Gaussian_on_sphere(Function2D, metaclass=FunctionMeta):
         )
 
     def get_boundaries(self):
-
         # Truncate the gaussian at 2 times the max of sigma allowed
 
         max_sigma = self.sigma.max_value
@@ -208,12 +201,10 @@ class Gaussian_on_sphere(Function2D, metaclass=FunctionMeta):
             max_abs_lat > 89.0
             or 2 * max_sigma / np.cos(max_abs_lat * np.pi / 180.0) >= 180.0
         ):
-
             min_lon = 0.0
             max_lon = 360.0
 
         else:
-
             min_lon = self.lon0.value - 2 * max_sigma / np.cos(
                 max_abs_lat * np.pi / 180.0
             )
@@ -222,11 +213,9 @@ class Gaussian_on_sphere(Function2D, metaclass=FunctionMeta):
             )
 
             if min_lon < 0.0:
-
                 min_lon = min_lon + 360.0
 
             elif max_lon > 360.0:
-
                 max_lon = max_lon - 360.0
 
         return (min_lon, max_lon), (min_lat, max_lat)
@@ -292,7 +281,6 @@ class Asymm_Gaussian_on_sphere(Function2D, metaclass=FunctionMeta):
     """
 
     def _set_units(self, x_unit, y_unit, z_unit):
-
         # lon0 and lat0 and a have most probably all units of degrees. However,
         # let's set them up here just to save for the possibility of using the
         # formula with other units (although it is probably never going to happen)
@@ -304,7 +292,6 @@ class Asymm_Gaussian_on_sphere(Function2D, metaclass=FunctionMeta):
         self.theta.unit = u.degree
 
     def evaluate(self, x, y, lon0, lat0, a, e, theta):
-
         lon, lat = x, y
 
         b = a * np.sqrt(1.0 - e**2)
@@ -346,7 +333,6 @@ class Asymm_Gaussian_on_sphere(Function2D, metaclass=FunctionMeta):
         return np.power(old_div(180, np.pi), 2) * 1.0 / (2 * np.pi * a * b) * np.exp(E)
 
     def get_boundaries(self):
-
         # Truncate the gaussian at 2 times the max of sigma allowed
 
         min_lat = max(-90.0, self.lat0.value - 2 * self.a.max_value)
@@ -358,12 +344,10 @@ class Asymm_Gaussian_on_sphere(Function2D, metaclass=FunctionMeta):
             max_abs_lat > 89.0
             or 2 * self.a.max_value / np.cos(max_abs_lat * np.pi / 180.0) >= 180.0
         ):
-
             min_lon = 0.0
             max_lon = 360.0
 
         else:
-
             min_lon = self.lon0.value - 2 * self.a.max_value / np.cos(
                 max_abs_lat * np.pi / 180.0
             )
@@ -372,11 +356,9 @@ class Asymm_Gaussian_on_sphere(Function2D, metaclass=FunctionMeta):
             )
 
             if min_lon < 0.0:
-
                 min_lon = min_lon + 360.0
 
             elif max_lon > 360.0:
-
                 max_lon = max_lon - 360.0
 
         return (min_lon, max_lon), (min_lat, max_lat)
@@ -428,7 +410,6 @@ class Disk_on_sphere(Function2D, metaclass=FunctionMeta):
     """
 
     def _set_units(self, x_unit, y_unit, z_unit):
-
         # lon0 and lat0 and rdiff have most probably all units of degrees. However,
         # let's set them up here just to save for the possibility of using the
         # formula with other units (although it is probably never going to happen)
@@ -438,12 +419,12 @@ class Disk_on_sphere(Function2D, metaclass=FunctionMeta):
         self.radius.unit = x_unit
 
     def evaluate(self, x, y, lon0, lat0, radius):
-
         lon, lat = x, y
 
         angsep = angular_distance(lon0, lat0, lon, lat)
 
-        return (
+        # TODO: test the effect on normalization
+        return 2 * (
             np.power(old_div(180, np.pi), 2)
             * 1.0
             / (np.pi * radius**2)
@@ -451,7 +432,6 @@ class Disk_on_sphere(Function2D, metaclass=FunctionMeta):
         )
 
     def get_boundaries(self):
-
         # Truncate the disk at 2 times the max of radius allowed
 
         max_radius = self.radius.max_value
@@ -465,12 +445,10 @@ class Disk_on_sphere(Function2D, metaclass=FunctionMeta):
             max_abs_lat > 89.0
             or 2 * max_radius / np.cos(max_abs_lat * np.pi / 180.0) >= 180.0
         ):
-
             min_lon = 0.0
             max_lon = 360.0
 
         else:
-
             min_lon = self.lon0.value - 2 * max_radius / np.cos(
                 max_abs_lat * np.pi / 180.0
             )
@@ -479,11 +457,9 @@ class Disk_on_sphere(Function2D, metaclass=FunctionMeta):
             )
 
             if min_lon < 0.0:
-
                 min_lon = min_lon + 360.0
 
             elif max_lon > 360.0:
-
                 max_lon = max_lon - 360.0
 
         return (min_lon, max_lon), (min_lat, max_lat)
@@ -554,7 +530,6 @@ class Ellipse_on_sphere(Function2D, metaclass=FunctionMeta):
     focal_pts = False
 
     def _set_units(self, x_unit, y_unit, z_unit):
-
         # lon0 and lat0 have most probably all units of degrees.
         # However, let's set them up here just to save for the possibility of
         # using the formula with other units (although it is probably never
@@ -583,7 +558,6 @@ class Ellipse_on_sphere(Function2D, metaclass=FunctionMeta):
         return lon1, lat1, lon2, lat2
 
     def evaluate(self, x, y, lon0, lat0, a, e, theta):
-
         b = a * np.sqrt(1.0 - e**2)
 
         # calculate focal points
@@ -606,7 +580,6 @@ class Ellipse_on_sphere(Function2D, metaclass=FunctionMeta):
         )
 
     def get_boundaries(self):
-
         # Truncate the ellipse at 2 times the max of semimajor axis allowed
 
         max_radius = self.a.max_value
@@ -620,12 +593,10 @@ class Ellipse_on_sphere(Function2D, metaclass=FunctionMeta):
             max_abs_lat > 89.0
             or 2 * max_radius / np.cos(max_abs_lat * np.pi / 180.0) >= 180.0
         ):
-
             min_lon = 0.0
             max_lon = 360.0
 
         else:
-
             min_lon = self.lon0.value - 2 * max_radius / np.cos(
                 max_abs_lat * np.pi / 180.0
             )
@@ -634,11 +605,9 @@ class Ellipse_on_sphere(Function2D, metaclass=FunctionMeta):
             )
 
             if min_lon < 0.0:
-
                 min_lon = min_lon + 360.0
 
             elif max_lon > 360.0:
-
                 max_lon = max_lon - 360.0
 
         return (min_lon, max_lon), (min_lat, max_lat)
@@ -699,7 +668,6 @@ class SpatialTemplate_2D(Function2D, metaclass=FunctionMeta):
     """
 
     def _set_units(self, x_unit, y_unit, z_unit):
-
         self.K.unit = z_unit
 
     # This is optional, and it is only needed if we need more setup after the
@@ -712,11 +680,9 @@ class SpatialTemplate_2D(Function2D, metaclass=FunctionMeta):
     # self._map = None
 
     def _load_file(self):
-
         self._fitsfile = self.fits_file.value
 
         with fits.open(self._fitsfile) as f:
-
             self._wcs = wcs.WCS(header=f[int(self.ihdu.value)].header)
             self._map = f[int(self.ihdu.value)].data
 
@@ -725,17 +691,19 @@ class SpatialTemplate_2D(Function2D, metaclass=FunctionMeta):
 
             # note: map coordinates are switched compared to header. NAXIS1 is coordinate 1, not 0.
             # see http://docs.astropy.org/en/stable/io/fits/#working-with-image-data
-            assert (
-                self._map.shape[1] == self._nX
-            ), "NAXIS1 = %d in fits header, but %d in map" % (
-                self._nX,
-                self._map.shape[1],
+            assert self._map.shape[1] == self._nX, (
+                "NAXIS1 = %d in fits header, but %d in map"
+                % (
+                    self._nX,
+                    self._map.shape[1],
+                )
             )
-            assert (
-                self._map.shape[0] == self._nY
-            ), "NAXIS2 = %d in fits header, but %d in map" % (
-                self._nY,
-                self._map.shape[0],
+            assert self._map.shape[0] == self._nY, (
+                "NAXIS2 = %d in fits header, but %d in map"
+                % (
+                    self._nY,
+                    self._map.shape[0],
+                )
             )
 
             # test if the map is normalized as expected
@@ -779,7 +747,6 @@ class SpatialTemplate_2D(Function2D, metaclass=FunctionMeta):
     #     self._frame = new_frame
 
     def evaluate(self, x, y, K, hash, ihdu):
-
         # We assume x and y are R.A. and Dec
         coord = SkyCoord(ra=x, dec=y, frame=self.frame.value, unit="deg")
 
@@ -799,7 +766,6 @@ class SpatialTemplate_2D(Function2D, metaclass=FunctionMeta):
         return np.multiply(K, out)
 
     def get_boundaries(self):
-
         # if self._map is None:
 
         #     self.load_file(self._fitsfile)
@@ -836,7 +802,6 @@ class SpatialTemplate_2D(Function2D, metaclass=FunctionMeta):
 
 
 class Power_law_on_sphere(Function2D, metaclass=FunctionMeta):
-
     r"""
     description :
 
@@ -882,7 +847,6 @@ class Power_law_on_sphere(Function2D, metaclass=FunctionMeta):
     """
 
     def _set_units(self, x_unit, y_unit, z_unit):
-
         # lon0 and lat0 and rdiff have most probably all units of degrees. However,
         # let's set them up here just to save for the possibility of using the
         # formula with other units (although it is probably never going to happen)
@@ -894,15 +858,12 @@ class Power_law_on_sphere(Function2D, metaclass=FunctionMeta):
         self.minr.unit = x_unit
 
     def evaluate(self, x, y, lon0, lat0, index, maxr, minr):
-
         lon, lat = x, y
 
         angsep = angular_distance(lon0, lat0, lon, lat)
 
         if maxr <= minr:
-            norm = (
-                np.power(np.pi / 180.0, 2.0 + index) * np.pi * maxr**2 * minr**index
-            )
+            norm = np.power(np.pi / 180.0, 2.0 + index) * np.pi * maxr**2 * minr**index
         elif self.index.value == -2.0:
             norm = np.pi * (1.0 + 2.0 * np.log(maxr / minr))
         else:
@@ -928,7 +889,6 @@ class Power_law_on_sphere(Function2D, metaclass=FunctionMeta):
         return value / norm
 
     def get_boundaries(self):
-
         return (
             (self.lon0.value - self.maxr.value),
             (self.lon0.value + self.maxr.value),
