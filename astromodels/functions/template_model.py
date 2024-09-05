@@ -5,7 +5,7 @@ import re
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import astropy.io.fits as fits
 import astropy.units as u
@@ -14,7 +14,6 @@ import numpy as np
 import scipy.interpolate
 from interpolation import interp
 from interpolation.splines import eval_linear
-from joblib import Parallel, delayed
 
 from astromodels.core.parameter import Parameter
 from astromodels.functions.function import Function1D, FunctionMeta
