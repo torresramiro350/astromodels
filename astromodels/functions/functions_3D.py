@@ -1,18 +1,20 @@
 from __future__ import division
 
 import hashlib
-from astropy import wcs
+
 import astropy.units as u
 import numpy as np
-from astropy.coordinates import ICRS, BaseCoordinateFrame, SkyCoord, Angle
+from astropy import wcs
+from astropy.coordinates import ICRS, BaseCoordinateFrame, SkyCoord
 from astropy.io import fits
 from past.utils import old_div
 from scipy.interpolate import RegularGridInterpolator
-import scipy
+
 from astromodels.functions.function import Function3D, FunctionMeta
 from astromodels.utils.angular_distance import angular_distance_fast
-from astropy.coordinates.angle_utilities import angular_separation, position_angle
-from astromodels.utils.angular_distance import angular_distance
+
+# from astropy.coordinates.angle_utilities import angular_separation, position_angle
+
 
 class Continuous_injection_diffusion_ellipse(Function3D, metaclass=FunctionMeta):
     r"""
@@ -93,7 +95,6 @@ class Continuous_injection_diffusion_ellipse(Function3D, metaclass=FunctionMeta)
     """
 
     def _set_units(self, x_unit, y_unit, z_unit, w_unit):
-
         # lon0 and lat0 and rdiff have most probably all units of degrees. However,
         # let's set them up here just to save for the possibility of using the
         # formula with other units (although it is probably never going to happen)
@@ -117,7 +118,6 @@ class Continuous_injection_diffusion_ellipse(Function3D, metaclass=FunctionMeta)
     def evaluate(
         self, x, y, z, lon0, lat0, rdiff0, delta, b, piv, piv2, incl, elongation
     ):
-
         lon, lat = x, y
         energy = z
 
@@ -134,7 +134,6 @@ class Continuous_injection_diffusion_ellipse(Function3D, metaclass=FunctionMeta)
         )
 
         try:
-
             rdiff_a = (
                 rdiff0
                 * np.power(
@@ -152,7 +151,6 @@ class Continuous_injection_diffusion_ellipse(Function3D, metaclass=FunctionMeta)
             )
 
         except ValueError:
-
             # This happens when using units, because astropy.units fails with the message:
             # "ValueError: Quantities and Units may only be raised to a scalar power"
 
@@ -212,7 +210,6 @@ class Continuous_injection_diffusion_ellipse(Function3D, metaclass=FunctionMeta)
         return results
 
     def get_boundaries(self):
-
         # Truncate the function at the max of rdiff allowed
 
         maximum_rdiff = self.rdiff0.max_value
@@ -226,12 +223,10 @@ class Continuous_injection_diffusion_ellipse(Function3D, metaclass=FunctionMeta)
             max_abs_lat > 89.0
             or old_div(maximum_rdiff, np.cos(max_abs_lat * np.pi / 180.0)) >= 180.0
         ):
-
             min_longitude = 0.0
             max_longitude = 360.0
 
         else:
-
             min_longitude = self.lon0.value - old_div(
                 maximum_rdiff, np.cos(max_abs_lat * np.pi / 180.0)
             )
@@ -240,11 +235,9 @@ class Continuous_injection_diffusion_ellipse(Function3D, metaclass=FunctionMeta)
             )
 
             if min_longitude < 0.0:
-
                 min_longitude += 360.0
 
             elif max_longitude > 360.0:
-
                 max_longitude -= 360.0
 
         return (min_longitude, max_longitude), (min_latitude, max_latitude)
@@ -333,7 +326,6 @@ class Continuous_injection_diffusion(Function3D, metaclass=FunctionMeta):
     """
 
     def _set_units(self, x_unit, y_unit, z_unit, w_unit):
-
         # lon0 and lat0 and rdiff have most probably all units of degrees. However,
         # let's set them up here just to save for the possibility of using the
         # formula with other units (although it is probably never going to happen)
@@ -354,7 +346,6 @@ class Continuous_injection_diffusion(Function3D, metaclass=FunctionMeta):
         self.piv2.unit = z_unit
 
     def evaluate(self, x, y, z, lon0, lat0, rdiff0, rinj, delta, b, piv, piv2):
-
         lon, lat = x, y
         energy = z
 
@@ -405,7 +396,6 @@ class Continuous_injection_diffusion(Function3D, metaclass=FunctionMeta):
         )
 
     def get_boundaries(self):
-
         # Truncate the function at the max of rdiff allowed
 
         maximum_rdiff = self.rdiff0.max_value
@@ -419,12 +409,10 @@ class Continuous_injection_diffusion(Function3D, metaclass=FunctionMeta):
             max_abs_lat > 89.0
             or old_div(maximum_rdiff, np.cos(max_abs_lat * np.pi / 180.0)) >= 180.0
         ):
-
             min_longitude = 0.0
             max_longitude = 360.0
 
         else:
-
             min_longitude = self.lon0.value - old_div(
                 maximum_rdiff, np.cos(max_abs_lat * np.pi / 180.0)
             )
@@ -433,11 +421,9 @@ class Continuous_injection_diffusion(Function3D, metaclass=FunctionMeta):
             )
 
             if min_longitude < 0.0:
-
                 min_longitude += 360.0
 
             elif max_longitude > 360.0:
-
                 max_longitude -= 360.0
 
         return (min_longitude, max_longitude), (min_latitude, max_latitude)
@@ -518,7 +504,6 @@ class Continuous_injection_diffusion_legacy(Function3D, metaclass=FunctionMeta):
     """
 
     def _set_units(self, x_unit, y_unit, z_unit, w_unit):
-
         # lon0 and lat0 and rdiff have most probably all units of degrees. However,
         # let's set them up here just to save for the possibility of using the
         # formula with other units (although it is probably never going to happen)
@@ -538,7 +523,6 @@ class Continuous_injection_diffusion_legacy(Function3D, metaclass=FunctionMeta):
         self.piv2.unit = z_unit
 
     def evaluate(self, x, y, z, lon0, lat0, rdiff0, delta, uratio, piv, piv2):
-
         lon, lat = x, y
         energy = z
 
@@ -555,7 +539,6 @@ class Continuous_injection_diffusion_legacy(Function3D, metaclass=FunctionMeta):
         )
 
         try:
-
             rdiff = (
                 rdiff0
                 * np.power(
@@ -567,7 +550,6 @@ class Continuous_injection_diffusion_legacy(Function3D, metaclass=FunctionMeta):
             )
 
         except ValueError:
-
             # This happens when using units, because astropy.units fails with the message:
             # "ValueError: Quantities and Units may only be raised to a scalar power"
 
@@ -604,7 +586,6 @@ class Continuous_injection_diffusion_legacy(Function3D, metaclass=FunctionMeta):
         )
 
     def get_boundaries(self):
-
         # Truncate the function at the max of rdiff allowed
 
         maximum_rdiff = self.rdiff0.max_value
@@ -618,12 +599,10 @@ class Continuous_injection_diffusion_legacy(Function3D, metaclass=FunctionMeta):
             max_abs_lat > 89.0
             or old_div(maximum_rdiff, np.cos(max_abs_lat * np.pi / 180.0)) >= 180.0
         ):
-
             min_longitude = 0.0
             max_longitude = 360.0
 
         else:
-
             min_longitude = self.lon0.value - old_div(
                 maximum_rdiff, np.cos(max_abs_lat * np.pi / 180.0)
             )
@@ -632,11 +611,9 @@ class Continuous_injection_diffusion_legacy(Function3D, metaclass=FunctionMeta):
             )
 
             if min_longitude < 0.0:
-
                 min_longitude += 360.0
 
             elif max_longitude > 360.0:
-
                 max_longitude -= 360.0
 
         return (min_longitude, max_longitude), (min_latitude, max_latitude)
@@ -683,11 +660,9 @@ class GalPropTemplate_3D(Function3D):
     __metaclass__ = FunctionMeta
 
     def _set_units(self, x_unit, y_unit, z_unit, w_unit):
-
         self.K.unit = (u.MeV * u.cm**2 * u.s * u.sr) ** (-1)
 
     def _setup(self):
-
         self._frame = ICRS()
         self._map = None
         self._fitsfile = None
@@ -705,7 +680,6 @@ class GalPropTemplate_3D(Function3D):
         self._frame = new_frame
 
     def load_file(self, fitsfile, phi1, phi2, theta1, theta2, galactic=False, ihdu=0):
-
         if fitsfile is None:
             raise RuntimeError("Need to specify a fits file with a template map.")
 
@@ -717,7 +691,6 @@ class GalPropTemplate_3D(Function3D):
         self.decmax = t2
 
         with fits.open(self._fitsfile) as f:
-
             self._delLon = f[ihdu].header["CDELT1"]
             self._delLat = f[ihdu].header["CDELT2"]
             self._delEn = f[ihdu].header["CDELT3"]
@@ -760,11 +733,9 @@ class GalPropTemplate_3D(Function3D):
             self.hash = int(h.hexdigest(), 16)
 
     def to_dict(self, minimal=False):
-
         data = super(Function3D, self).to_dict(minimal)
 
         if not minimal:
-
             data["extra_setup"] = {
                 "_fitsfile": self._fitsfile,
                 "_frame": self._frame,
@@ -780,9 +751,7 @@ class GalPropTemplate_3D(Function3D):
         return self._fitsfile
 
     def evaluate(self, x, y, z, K, hash):
-
         if self._map is None:
-
             self.load_file(
                 self._fitsfile,
                 self.ramin,
@@ -795,7 +764,6 @@ class GalPropTemplate_3D(Function3D):
 
         # Interpolated values can be cached since we are fitting the constant K
         if self._interpmap is None:
-
             # We assume x and y are R.A. and Dec
             _coord = SkyCoord(ra=x, dec=y, frame=self._frame, unit="deg")
             b = _coord.transform_to("galactic").b.value
@@ -865,54 +833,56 @@ class GalPropTemplate_3D(Function3D):
         min_latitude = self.decmin
         max_latitude = self.decmax
         return (min_longitude, max_longitude), (min_latitude, max_latitude)
+
+
 class Hermes(Function3D, metaclass=FunctionMeta):
     r"""
-        description :
+    description :
 
-            Use a 3D template that has morphology and flux information.
-            GalProp, DRAGON or a similar model in fits format would work. 
-            Only parameter is a normalization factor. 
+        Use a 3D template that has morphology and flux information.
+        GalProp, DRAGON or a similar model in fits format would work.
+        Only parameter is a normalization factor.
 
-        latex : $ K $
+    latex : $ K $
 
-        parameters :
+    parameters :
 
-            K :
+        K :
 
-                desc : normalization
-                initial value : 1
-                fix : yes
+            desc : normalization
+            initial value : 1
+            fix : yes
 
-            hash :
+        hash :
 
-                desc : hash of model map [needed for memoization]
-                initial value : 1
-                fix : yes
+            desc : hash of model map [needed for memoization]
+            initial value : 1
+            fix : yes
 
-            ihdu:
-                desc: header unit index of fits file
-                initial value: 0
-                fix: True
-                min: 0
+        ihdu:
+            desc: header unit index of fits file
+            initial value: 0
+            fix: True
+            min: 0
 
-        properties:
-            fits_file:
-                desc: fits file to load
-                defer: True
-                function: _load_file
-            frame:
-                desc: coordinate frame
-                initial value: icrs
-                allowed values:
-                    - icrs
-                    - galactic
-                    - fk5
-                    - fk4
-                    - fk4_no_e
+    properties:
+        fits_file:
+            desc: fits file to load
+            defer: True
+            function: _load_file
+        frame:
+            desc: coordinate frame
+            initial value: icrs
+            allowed values:
+                - icrs
+                - galactic
+                - fk5
+                - fk4
+                - fk4_no_e
     """
 
     def _set_units(self, x_unit, y_unit, z_unit, w_unit):
-        #self.K.unit = (u.keV * u.cm**2 * u.s * u.sr) ** (-1)
+        # self.K.unit = (u.keV * u.cm**2 * u.s * u.sr) ** (-1)
         # The spectrum and morphology are embedded in the template.
         # The normalization K is for scaling up or down the whole template to fit the data.
         self.K.unit = w_unit
@@ -933,56 +903,55 @@ class Hermes(Function3D, metaclass=FunctionMeta):
         self._frame = new_frame
 
     def _load_file(self):
-
         if self.fits_file is None:
-            raise RuntimeError(
-                "Need to specify a fits file with a template map.")
+            raise RuntimeError("Need to specify a fits file with a template map.")
 
-        self._fitsfile=self.fits_file.value
+        self._fitsfile = self.fits_file.value
 
         with fits.open(self._fitsfile) as f:
-
-            self._delLon = f[int(self.ihdu.value)].header['CDELT1']
-            self._delLat = f[int(self.ihdu.value)].header['CDELT2']
-            self._delEn = f[int(self.ihdu.value)].header['CDELT3']
-            self._refLon = f[int(self.ihdu.value)].header['CRVAL1']
-            self._refLat = f[int(self.ihdu.value)].header['CRVAL2']
-            self._refEn = f[int(self.ihdu.value)].header['CRVAL3']  # values in log10
+            self._delLon = f[int(self.ihdu.value)].header["CDELT1"]
+            self._delLat = f[int(self.ihdu.value)].header["CDELT2"]
+            self._delEn = f[int(self.ihdu.value)].header["CDELT3"]
+            self._refLon = f[int(self.ihdu.value)].header["CRVAL1"]
+            self._refLat = f[int(self.ihdu.value)].header["CRVAL2"]
+            self._refEn = f[int(self.ihdu.value)].header["CRVAL3"]  # values in log10
             self._map = f[int(self.ihdu.value)].data
-            self._wcs = wcs.WCS(header = f[int(self.ihdu.value)].header)
+            self._wcs = wcs.WCS(header=f[int(self.ihdu.value)].header)
             if len(self._map.shape) == 4:
                 self._map = self._map[0]
-            self._nl = f[int(self.ihdu.value)].header['NAXIS1']  # longitude
-            self._nb = f[int(self.ihdu.value)].header['NAXIS2']  # latitude
-            self._ne = f[int(self.ihdu.value)].header['NAXIS3']  # energy
+            self._nl = f[int(self.ihdu.value)].header["NAXIS1"]  # longitude
+            self._nb = f[int(self.ihdu.value)].header["NAXIS2"]  # latitude
+            self._ne = f[int(self.ihdu.value)].header["NAXIS3"]  # energy
 
             # Create the function for the interpolation
             self._L = np.linspace(
-                self._refLon, self._refLon-(self._nl-1)*self._delLon, self._nl)
+                self._refLon, self._refLon - (self._nl - 1) * self._delLon, self._nl
+            )
             self._B = np.linspace(
-                self._refLat, self._refLat+(self._nb-1)*self._delLat, self._nb)
+                self._refLat, self._refLat + (self._nb - 1) * self._delLat, self._nb
+            )
             self._E = np.linspace(
-                self._refEn, self._refEn+(self._ne-1)*self._delEn, self._ne)
+                self._refEn, self._refEn + (self._ne - 1) * self._delEn, self._ne
+            )
             for i in range(len(self._E)):
                 self._map[i] = np.fliplr(self._map[i])
             self._F = RegularGridInterpolator(
-                (self._E, self._B, self._L), self._map, bounds_error=False)
+                (self._E, self._B, self._L), self._map, bounds_error=False
+            )
 
             h = hashlib.sha224()
             h.update(self._map)
             h.update(repr(self._wcs).encode("utf-8"))
             self.hash = int(h.hexdigest(), 16)
 
-
     def evaluate(self, x, y, z, K, hash, ihdu):
-
         if self._map is None:
             self._load_file(self._fitsfile)
 
         if self._intmap is None:
             _coord = SkyCoord(ra=x, dec=y, frame=self._frame, unit="deg")
-            b = _coord.transform_to('galactic').b.value
-            l = _coord.transform_to('galactic').l.value
+            b = _coord.transform_to("galactic").b.value
+            l = _coord.transform_to("galactic").l.value
             lon = l
             lat = b
             energy = np.log10(z)
@@ -991,9 +960,9 @@ class Hermes(Function3D, metaclass=FunctionMeta):
                 raise AttributeError("Lon and Lat should be the same size")
             f = np.zeros([lon.size, energy.size])
             E0 = self._refEn
-            Ef = self._refEn + (self._ne-1)*self._delEn
+            Ef = self._refEn + (self._ne - 1) * self._delEn
 
-            shift = np.where(lon > 180.)
+            shift = np.where(lon > 180.0)
             lon[shift] = 180 - lon[shift]
 
             for i in range(energy.size):
@@ -1012,10 +981,12 @@ class Hermes(Function3D, metaclass=FunctionMeta):
 
     def get_boundaries(self):
         # Taken from SpatialTemplate_2D
-        Xcorners = np.array( [0, 0,        self._nl, self._nl] )
-        Ycorners = np.array( [0, self._nb, 0,        self._nb] )
+        Xcorners = np.array([0, 0, self._nl, self._nl])
+        Ycorners = np.array([0, self._nb, 0, self._nb])
 
-        corners = SkyCoord.from_pixel( Xcorners, Ycorners, wcs=self._wcs, origin = 0).transform_to(self._frame)
+        corners = SkyCoord.from_pixel(
+            Xcorners, Ycorners, wcs=self._wcs, origin=0
+        ).transform_to(self._frame)
 
         min_lon = min(corners.ra.degree)
         max_lon = max(corners.ra.degree)
@@ -1025,8 +996,7 @@ class Hermes(Function3D, metaclass=FunctionMeta):
 
         return (min_lon, max_lon), (min_lat, max_lat)
 
-
     def get_total_spatial_integral(self, z=None):
-        if isinstance( z, u.Quantity):
+        if isinstance(z, u.Quantity):
             z = z.value
-        return np.multiply(self.K.value, np.ones_like( z ))
+        return np.multiply(self.K.value, np.ones_like(z))
