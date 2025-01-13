@@ -6,13 +6,25 @@ import astropy.units as u
 import numpy as np
 from astropy import wcs
 from astropy.coordinates import ICRS, BaseCoordinateFrame, SkyCoord
+from astropy.coordinates import Angle, SkyCoord
+from astropy.coordinates.angle_utilities import angular_separation, position_angle
 from astropy.io import fits
 from past.utils import old_div
+import scipy
+import math
 
 from astromodels.functions.function import Function2D, FunctionMeta
 from astromodels.utils.angular_distance import angular_distance
 from astromodels.utils.logging import setup_logger
 from astromodels.utils.vincenty import vincenty
+
+from regions import (
+    CircleAnnulusSkyRegion,
+    CircleSkyRegion,
+    EllipseSkyRegion,
+    PointSkyRegion,
+    RectangleSkyRegion,
+)
 
 log = setup_logger(__name__)
 
@@ -1020,3 +1032,142 @@ class Power_law_on_sphere(Function2D, metaclass=FunctionMeta):
 #             data['extra_setup'] = {'integrand': self.integrand.path}
 #
 #         return data
+
+def compute_sigma_eff(lon_0, lat_0, lon, lat, phi, major_axis, e):
+    """Effective radius, used for the evaluation of elongated models"""
+    phi_0 = position_angle(lon_0, lat_0, lon, lat)
+    phi = Angle(phi, u.degree)
+    d_phi = phi - phi_0
+    minor_axis = Angle(major_axis * np.sqrt(1 - e**2), u.degree)
+    minor_axis = Angle(minor_axis, u.degree)
+    d_phi = Angle(d_phi, u.degree)
+    a2 = (major_axis * np.sin(d_phi)) ** 2
+    b2 = (minor_axis * np.cos(d_phi)) ** 2
+    denominator = np.sqrt(a2 + b2)
+    sigma_eff = major_axis * minor_axis / denominator
+    return minor_axis, sigma_eff
+
+
+class GeneralizedGaussianSpatialModel(Function2D, metaclass=FunctionMeta):
+    r"""
+        description :
+
+            Positron and electrons diffusing away from the accelerator
+
+        latex : $\left(\frac{180^\circ}{\pi}\right)^2 \frac{1.2154}{\sqrt{\pi^3} r_{\rm diff} ({\rm angsep} ({\rm x, y, lon_0, lat_0})+0.06 r_{\rm diff} )} \, {\rm exp}\left(-\frac{{\rm angsep}^2 ({\rm x, y, lon_0, lat_0})}{r_{\rm diff} ^2} \right)$
+
+        parameters :
+
+            lon0 :
+
+                desc : Longitude of the center of the source
+                initial value : 0.0
+                min : 0.0
+                max : 360.0
+
+            lat0 :
+
+                desc : Latitude of the center of the source
+                initial value : 0.0
+                min : -90.0
+                max : 90.0
+
+            r_0 :
+
+                desc : Projected diffusion radius. The maximum allowed value is used to define the truncation radius.
+                initial value : 1.0
+                min : 0
+                max : 20
+
+            eta :
+
+                desc : index for the diffusion coefficient
+                initial value : 0.5
+                min : 0.01
+                max : 1
+                fix : yes
+
+            e :
+
+                desc : Excentricity of Gaussian ellipse
+                initial value : 0.9
+                min : 0
+                max : 1
+
+            phi :
+
+                desc : inclination of major axis to a line of constant latitude
+                initial value : 10.
+                min : -90.0
+                max : 90.0
+
+
+        """
+
+    def _set_units(self, x_unit, y_unit, z_unit):
+
+        # lon0 and lat0 and rdiff have most probably all units of degrees. However,
+        # let's set them up here just to save for the possibility of using the
+        # formula with other units (although it is probably never going to happen)
+
+        self.lon0.unit = x_unit
+        self.lat0.unit = y_unit
+        self.r_0.unit = u.degree
+        self.eta.unit = u.dimensionless_unscaled
+        self.e.unit = u.dimensionless_unscaled
+        self.phi.unit = u.degree
+        # Delta is of course unitless
+
+    def evaluate(self, x, y, lon0, lat0, r_0, eta, e, phi ):
+        r0 = r_0 * (u.degree)
+        lon, lat = x,y
+        angsep = angular_separation(lon0, lat0, lon, lat)
+        if isinstance(eta, u.Quantity):
+            eta = eta.value  # gamma function does not allow quantities
+        minor_axis, r_eff = compute_sigma_eff(lon0, lat0, lon, lat, phi, r0, e)
+        z = angsep / r_eff
+        minor_axis = Angle(minor_axis, u.degree)
+        norm = 1 / (2 * np.pi * minor_axis * r0 * eta * scipy.special.gamma(2 * eta))
+        normvalue = (norm * np.exp(-(z.value ** (1 / eta)))).to("sr-1")
+        return normvalue
+
+    def get_boundaries(self):
+
+        # Truncate the gaussian at 2 times the max of sigma allowed
+
+        min_lat = max(-90., self.lat0.value - 2 * self.r_0.max_value)
+        max_lat = min(90., self.lat0.value + 2 * self.r_0.max_value)
+
+        max_abs_lat = max(np.absolute(min_lat), np.absolute(max_lat))
+
+        if max_abs_lat > 89. or 2 * self.r_0.max_value / np.cos(max_abs_lat * np.pi / 180.) >= 180.:
+
+            min_lon = 0.
+            max_lon = 360.
+
+        else:
+
+            min_lon = self.lon0.value - 2 * self.r_0.max_value / np.cos(max_abs_lat * np.pi / 180.)
+            max_lon = self.lon0.value + 2 * self.r_0.max_value / np.cos(max_abs_lat * np.pi / 180.)
+
+            if min_lon < 0.:
+
+                min_lon = min_lon + 360.
+
+            elif max_lon > 360.:
+
+                max_lon = max_lon - 360.
+
+        return (min_lon, max_lon), (min_lat, max_lat)
+
+    def get_total_spatial_integral(self, z=None):
+        """
+        Returns the total integral (for 2D functions) or the integral over the spatial components (for 3D functions).
+        needs to be implemented in subclasses.
+
+        :return: an array of values of the integral (same dimension as z).
+        """
+
+        if isinstance(z, u.Quantity):
+            z = z.value
+        return np.ones_like(z)
