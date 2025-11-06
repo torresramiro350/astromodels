@@ -57,8 +57,6 @@ class Modeling:
 
 @dataclass
 class Config:
-    logging: Logging = field(default_factory=lambda: Logging)
-    absorption_models: AbsorptionModels = field(
-        default_factory=lambda: AbsorptionModels
-    )
-    modeling: Modeling = field(default_factory=lambda: Modeling)
+    logging: Logging = field(default_factory=Logging)
+    absorption_models: AbsorptionModels = field(default_factory=AbsorptionModels)
+    modeling: Modeling = field(default_factory=Modeling)
