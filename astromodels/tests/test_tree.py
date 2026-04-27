@@ -1,17 +1,10 @@
-from __future__ import print_function
-
 import gc
-import os
 from builtins import range
 
 import astropy.units as u
 import pytest
 
 from astromodels.core.tree import Node
-
-# os.environ["ASTROMODELS_DEBUG"] = "debug"
-
-# from astromodels.core import node_ctype
 
 
 def clean():
@@ -59,7 +52,7 @@ def test_constructor():
 
     with pytest.raises(TypeError):
 
-        n2 = Node()
+        _ = Node()
 
     clean()
 

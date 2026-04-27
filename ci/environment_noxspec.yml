@@ -2,7 +2,6 @@ name: test_env
 
 channels:
   - conda-forge
-  - https://heasarc.gsfc.nasa.gov/FTP/software/conda/
   - defaults
   
 dependencies:
@@ -17,7 +16,6 @@ dependencies:
   - dill
   - wcslib
   - future
-  - xspec==12.15.0
   - numba
   - h5py
   - interpolation>=2.2.3

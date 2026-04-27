@@ -1,5 +1,4 @@
-from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from omegaconf import OmegaConf
 from omegaconf.dictconfig import DictConfig
@@ -45,10 +44,7 @@ def recurse_dict(d, tree):
 
 
 def show_configuration(sub_menu: Optional[str] = None):
-    """
-    display the current configuration or a sub menu if
-    provided
-    """
+    """Display the current configuration or a sub menu if provided."""
 
     if sub_menu is None:
 
