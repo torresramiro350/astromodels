@@ -14,7 +14,6 @@ dependencies:
   - pytables
   - pandas>=0.23
   - dill
-  - wcslib
   - future
   - numba
   - h5py
@@ -23,3 +22,4 @@ dependencies:
   - colorama
   - rich
   - joblib
+  - versioneer

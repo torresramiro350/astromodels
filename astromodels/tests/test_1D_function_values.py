@@ -17,7 +17,7 @@ _multiplicative_models = [
 
 def test_function_values_have_not_changed():
 
-    with h5py.File(_get_data_file_path("past_1D_values.h5"), "r") as f:
+    with h5py.File(_get_data_file_path("tests/past_1D_values.h5"), "r") as f:
 
         eval_x = f["eval_values"][()]
 
@@ -67,7 +67,7 @@ def test_function_values_have_not_changed():
 
             new_values = np.atleast_1d(func(eval_x))
 
-            with h5py.File(_get_data_file_path("past_1D_values.h5"), "r") as f:
+            with h5py.File(_get_data_file_path("tests/past_1D_values.h5"), "r") as f:
                 if key not in f.keys():
                     msg = f"the function {key} does not exist in the past data. You"
                     msg += " must run a script to add it"
@@ -78,3 +78,9 @@ def test_function_values_have_not_changed():
                     old_values = f[key][()]
 
                     npt.assert_almost_equal(new_values, old_values)
+
+            if key == "Cutoff_powerlaw_Ep":
+                func = this_function()
+                func.index.value = -3
+                func.xp.value = 10
+                assert np.isclose(func(1), 1.10517)

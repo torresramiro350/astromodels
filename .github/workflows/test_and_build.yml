@@ -36,12 +36,12 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: ["3.9", "3.10", "3.11"]
-                os: ["ubuntu-latest", "macos-latest", "macos-15-intel"]
+                python-version: ["3.10", "3.11", "3.12", "3.13"]
+                os: ["ubuntu-latest", "macos-latest", "macos-15-intel","ubuntu-24.04-arm"]
         runs-on: ${{ matrix.os }}
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
             - name: Set up Python ${{ matrix.python-version }}
               uses: actions/setup-python@v5
               with:
@@ -50,14 +50,16 @@ jobs:
               run: |
                   python -m pip install --upgrade pip wheel
                   pip install --upgrade flake8 coverage pytest-cov cython
+                  pip install mhealpy
                   
-                  if [[ ${{matrix.os}} != ubuntu-latest ]];
+                  if [[ ${{matrix.os}} != ubuntu-latest && ${{matrix.os}} != ubuntu-24.04-arm ]];
                   then
                     brew update
                     brew install hdf5 lzo c-blosc
                   fi
 
                   pip install -e .
+
             - name: Lint with flake8
               run: |
                   # stop the build if there are Python syntax errors or undefined names
@@ -98,12 +100,28 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                os: ["ubuntu-latest", "macos-latest", "macos-15-intel"]
-                python-version: [3.9, 3.11]
+                os: ["ubuntu-latest", "macos-latest", "macos-15-intel","ubuntu-24.04-arm"]
+                python-version: ["3.11","3.13"]
+                env-file: [ci/environment.yml,ci/environment_heasoft.yml]
+                
+                exclude:
+                  - os: ubuntu-24.04-arm
+                    env-file: ci/environment.yml
+                  - os: ubuntu-24.04-arm
+                    env-file: ci/environment_heasoft.yml
+            
+                include:
+                  - os: ubuntu-24.04-arm
+                    python-version: "3.11"
+                    env-file: ci/environment_aarch64.yml
+                  - os: ubuntu-24.04-arm
+                    python-version: "3.13"
+                    env-file: ci/environment_aarch64.yml
+
         runs-on: ${{ matrix.os }}
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
             - name: Add conda ${{ matrix.python-version }} to system path
               uses: conda-incubator/setup-miniconda@v3
               with:
@@ -112,7 +130,7 @@ jobs:
                   miniforge-version: latest
                   python-version: ${{ matrix.python-version }}
                   auto-update-conda: true
-                  environment-file: ci/environment.yml
+                  environment-file: ${{ matrix.env-file }}
                   use-only-tar-bz2: false
                   channel-priority: true
             - name: Init Env
@@ -121,22 +139,21 @@ jobs:
                   # Make sure we fail in case of error
                   if [[ ${{matrix.os}} == ubuntu-latest ]];
                   then
-                  miniconda_os=Linux
-                  compilers="gcc_linux-64 gxx_linux-64 gfortran_linux-64"
+                    miniconda_os=Linux
+                    compilers="gcc_linux-64 gxx_linux-64 gfortran_linux-64"
                   else  # osx
-                  miniconda_os=MacOSX
-                  compilers="clang_osx-64 clangxx_osx-64 gfortran_osx-64"
+                    miniconda_os=MacOSX
+                    compilers="clang_osx-64 clangxx_osx-64 gfortran_osx-64"
 
                   # On macOS we also need the conda libx11 libraries used to build xspec
                   # We also need to pin down ncurses, for now only on macos.
                   xorg="xorg-libx11"
                   fi
 
-
                   export PKG_VERSION=$(python -c "import versioneer;print(versioneer.get_version())")
 
                   mamba install ${PKG} codecov pytest-cov git flake8
-
+            
             - name: Conda list
               shell: bash -l {0}
               run: |
@@ -144,6 +161,7 @@ jobs:
             - name: install it
               shell: bash -l {0}
               run: |
+                  pip install mhealpy
                   pip install -e .
             - name: Lint with flake8
               shell: bash -l {0}
@@ -152,8 +170,15 @@ jobs:
                   flake8
 
             - name: Test import xspec
+              if: ${{ matrix.os != 'ubuntu-24.04-arm' }}
               shell: bash -l {0}
-              run: python -c "import astromodels.xspec"
+              run: |
+                echo $DYLD_LIBRARY_PATH
+                echo $LD_LIBRARY_PATH
+                #ls $CONDA_PREFIX/lib/libwcs*
+                ls $CONDA_PREFIX/heasoft/lib/libwcs*
+                python -c "import astromodels.xspec"
+
             - name: Test astromodels
               shell: bash -l {0}
               run: python -m pytest -vv --cov=astromodels --cov-report=xml
@@ -164,9 +189,7 @@ jobs:
                   MPLBACKEND: "Agg"
 
             - name: Upload coverage to Codecov
-              uses: codecov/codecov-action@v4
+              uses: codecov/codecov-action@v5
               with:
-                  file: ./coverage.xml
-                  files: ./coverage1.xml,./coverage2.xml
-                  directory: ./coverage/reports/
+                  token: ${{ secrets.CODECOV_TOKEN }}
 

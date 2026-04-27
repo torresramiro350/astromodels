@@ -20,7 +20,7 @@ it can be used also as a toolbox containing functions of any variable.
 
 Astromodels is *not* a modeling package, it only gives you the tools to build a
 model as complex as you need.  You then need a separate package (such as
-`3ML <https://github.com/threeML/threeML>`) to fit that model to the data.
+`3ML <https://github.com/threeML/threeML>`__) to fit that model to the data.
 
 Some of the features which distinguish astromodels from other similar packages
 are:
@@ -42,7 +42,9 @@ astropy.modeling and the modeling part of sherpa.
 
 .. note:: 
   
-    **Note for XSPEC users:**
+    **Notes for XSPEC users:**
+
+    `astromodels` XSPEC support is *not* available for Linux arm64.
 
     Starting from version 2.5.0 there is currently support for XSPEC
     installed via Conda via the `xspec` conda package (see
@@ -71,8 +73,9 @@ Contents:
 =========
 
 .. toctree::
-    :maxdepth: 3
+    :maxdepth: 1
 
+    installation.md
     notebooks/Quick_start.ipynb
     notebooks/Configuration.ipynb
     function_docs/functions.rst
@@ -85,4 +88,4 @@ Contents:
     notebooks/Priors_for_Bayesian_analysis.ipynb
     notebooks/Additional_features_for_scripts_and_applications.ipynb
     api/API
-    release_notes.rst
+    CHANGELOG.md
